@@ -20,11 +20,13 @@ struct TopBannerView: View {
                     .cornerRadius(12)
                     .overlay(
                         // 如果文字不为空，叠加文字
-                        if !banner.text.isEmpty {
-                            Text(banner.text)
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
-                                .shadow(color: .black.opacity(0.5), radius: 3)
+                        Group {
+                            if !banner.text.isEmpty {
+                                Text(banner.text)
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .shadow(color: .black.opacity(0.5), radius: 3)
+                            }
                         }
                     )
             } else {
