@@ -53,8 +53,10 @@ jobs:
         run: |
           echo "=== Swift Compilation Errors ==="
           grep -n "error:" build.log | grep -i "\.swift" | head -20 || echo "No Swift errors found in log"
-          echo "=== Last 20 lines of build ==="
-          tail -20 build.log
+          echo "=== All errors from log ==="
+          grep -n "error:" build.log | head -30 | while IFS= read -r line; do echo "::error::$line"; done
+          echo "=== Last 30 lines of build ==="
+          tail -30 build.log
 
       - name: Package .app into IPA
         run: |
