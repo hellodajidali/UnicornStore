@@ -48,6 +48,14 @@ jobs:
           path: build.log
           compression-level: 0
 
+      - name: Show compilation errors
+        if: failure()
+        run: |
+          echo "=== Swift Compilation Errors ==="
+          grep -n "error:" build.log | grep -i "\.swift" | head -20 || echo "No Swift errors found in log"
+          echo "=== Last 20 lines of build ==="
+          tail -20 build.log
+
       - name: Package .app into IPA
         run: |
           mkdir -p Payload
