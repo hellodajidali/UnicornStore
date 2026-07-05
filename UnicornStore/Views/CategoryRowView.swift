@@ -74,7 +74,8 @@ struct CategoryEditView: View {
     @State private var categoryTextColor: String = "#663399"
     @State private var editingCategoryFontColor: Category? = nil
     @State private var showFontColorSheet = false
-    @State private var showDeleteConfirm: Category? = nil
+    @State private var showDeleteAlert = false
+    @State private var categoryToDelete: Category? = nil
     
     private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
     
@@ -103,6 +104,7 @@ struct CategoryEditView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(.blue)
                             }
+                            .buttonStyle(BorderlessButtonStyle())
                             
                             // 编辑名称
                             Button(action: {
@@ -114,15 +116,18 @@ struct CategoryEditView: View {
                                     .font(.system(size: 12))
                                     .foregroundColor(.blue)
                             }
+                            .buttonStyle(BorderlessButtonStyle())
                             
                             // 删除
                             Button(action: {
-                                showDeleteConfirm = category
+                                categoryToDelete = category
+                                showDeleteAlert = true
                             }) {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.system(size: 16))
                                     .foregroundColor(.red)
                             }
+                            .buttonStyle(BorderlessButtonStyle())
                         }
                     }
                     .padding(.vertical, 4)
@@ -182,13 +187,16 @@ struct CategoryEditView: View {
             }
         }
         // 删除确认
-        .alert(item: $showDeleteConfirm) { category in
+        .alert(isPresented: $showDeleteAlert) {
             Alert(
                 title: Text("删除分类"),
-                message: Text("确定要删除「\(category.name)」吗？该分类下的商品不会自动删除。"),
+                message: Text("确定要删除「\(categoryToDelete?.name ?? "")」吗？该分类下的商品不会自动删除。"),
                 primaryButton: .cancel(Text("取消")),
                 secondaryButton: .destructive(Text("删除")) {
-                    dataStore.deleteCategory(category)
+                    if let cat = categoryToDelete {
+                        dataStore.deleteCategory(cat)
+                        categoryToDelete = nil
+                    }
                 }
             )
         }

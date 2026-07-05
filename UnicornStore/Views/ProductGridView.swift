@@ -171,6 +171,7 @@ struct GridLayoutEditView: View {
                             )
                             .cornerRadius(10)
                     }
+                    .buttonStyle(BorderlessButtonStyle())
                 }
             }
         }

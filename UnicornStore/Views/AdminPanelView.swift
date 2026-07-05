@@ -11,6 +11,9 @@ struct AdminPanelView: View {
     @State private var exportMessage = ""
     @State private var showShareSheet = false
     @State private var shareFileURL: URL? = nil
+    @State private var showFileImporter = false
+    @State private var showImportAlert = false
+    @State private var importMessage = ""
     
     private var themeColor: Color {
         dataStore.storeData.themeColor.toColor()
@@ -102,6 +105,18 @@ struct AdminPanelView: View {
                     }
                     
                     Button(action: {
+                        showFileImporter = true
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.arrow.down.fill")
+                                .foregroundColor(.green)
+                            Text("导入数据备份")
+                                .font(.system(size: 15))
+                                .foregroundColor(.green)
+                        }
+                    }
+                    
+                    Button(action: {
                         dataStore.storeData = StoreData.defaultData()
                         exportMessage = "已重置为默认数据"
                         showExportAlert = true
@@ -131,9 +146,35 @@ struct AdminPanelView: View {
                     dismissButton: .default(Text("确定"))
                 )
             }
+            .alert(isPresented: $showImportAlert) {
+                Alert(
+                    title: Text("导入结果"),
+                    message: Text(importMessage),
+                    dismissButton: .default(Text("确定"))
+                )
+            }
             .sheet(isPresented: $showShareSheet) {
                 if let url = shareFileURL {
                     ShareSheet(activityItems: [url])
+                }
+            }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.json]) { result in
+                switch result {
+                case .success(let url):
+                    do {
+                        let data = try Data(contentsOf: url)
+                        if dataStore.importData(data) {
+                            importMessage = "数据导入成功！"
+                        } else {
+                            importMessage = "导入失败：数据格式不正确"
+                        }
+                    } catch {
+                        importMessage = "导入失败：\\(error.localizedDescription)"
+                    }
+                    showImportAlert = true
+                case .failure(let error):
+                    importMessage = "选择文件失败：\\(error.localizedDescription)"
+                    showImportAlert = true
                 }
             }
         }
@@ -234,7 +275,7 @@ struct ThemeColorEditView: View {
     @EnvironmentObject var dataStore: DataStore
     @State private var themeColor: String = "#9966CC"
     
-    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12", "#FFFFFF"]
+    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12", "#FFFFFF", "#808080", "#E0E0E0"]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

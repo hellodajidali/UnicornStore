@@ -163,7 +163,11 @@ struct ImageDetailOverlay: View {
                                     }
                             )
                             .onTapGesture(count: 2) {
-                                handleDoubleTap()
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    isShowing = false
+                                    scale = 1.0
+                                    lastScale = 1.0
+                                }
                             }
                             .frame(maxWidth: UIScreen.main.bounds.width - 40)
                             .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
@@ -199,7 +203,7 @@ struct ImageDetailOverlay: View {
                     }
                     
                     // 操作提示
-                    Text(scale > 1.0 ? "双击缩小" : "双击放大")
+                    Text("双击返回网格列表")
                         .font(.system(size: 12))
                         .foregroundColor(.gray.opacity(0.6))
                         .padding(.top, 8)
@@ -210,17 +214,4 @@ struct ImageDetailOverlay: View {
         .animation(.easeInOut(duration: 0.3), value: isShowing)
     }
     
-    private func handleDoubleTap() {
-        withAnimation(.spring()) {
-            if scale > 1.0 {
-                // 已放大 → 缩小回默认
-                scale = 1.0
-                lastScale = 1.0
-            } else {
-                // 默认大小 → 放大到2.5倍
-                scale = 2.5
-                lastScale = 2.5
-            }
-        }
-    }
 }
