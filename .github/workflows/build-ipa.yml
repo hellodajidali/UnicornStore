@@ -29,8 +29,8 @@ jobs:
       - name: Build .app
         run: |
           xcodebuild \
-            -project 雾化胖东来.xcodeproj \
-            -scheme 雾化胖东来 \
+            -project UnicornStore.xcodeproj \
+            -scheme UnicornStore \
             -sdk iphoneos \
             -configuration Release \
             -derivedDataPath Build \
@@ -61,20 +61,20 @@ jobs:
       - name: Package .app into IPA
         run: |
           mkdir -p Payload
-          cp -r Build/Build/Products/Release-iphoneos/雾化胖东来.app Payload/
-          zip -r 雾化胖东来.ipa Payload/
+          cp -r "Build/Build/Products/Release-iphoneos/UnicornStore.app" Payload/
+          zip -r UnicornStore.ipa Payload/
           rm -rf Payload
 
       - name: Upload IPA as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 雾化胖东来-IPA
-          path: 雾化胖东来.ipa
+          name: UnicornStore-IPA
+          path: UnicornStore.ipa
           compression-level: 0
 
       - name: Upload .app as artifact (备用)
         uses: actions/upload-artifact@v4
         with:
-          name: 雾化胖东来-App
-          path: Build/Build/Products/Release-iphoneos/雾化胖东来.app
+          name: UnicornStore-App
+          path: Build/Build/Products/Release-iphoneos/UnicornStore.app
           compression-level: 0

@@ -1,4 +1,4 @@
-name: 雾化胖东来
+name: UnicornStore
 options:
   bundleIdPrefix: com.unicornstore
   deploymentTarget:
@@ -17,7 +17,7 @@ settings:
     PROVISIONING_PROFILE_SPECIFIER: ""
 
 targets:
-  雾化胖东来:
+  UnicornStore:
     type: application
     platform: iOS
     sources:
@@ -26,6 +26,7 @@ targets:
       base:
         INFOPLIST_FILE: UnicornStore/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.unicornstore.app
+        PRODUCT_NAME: UnicornStore
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "2"
     info:
