@@ -29,16 +29,17 @@ struct MainContentView: View {
                 // 顶部工具栏
                 topToolbar
                 
+                // 2. 分类栏 — 独立在垂直 ScrollView 外面，避免手势竞争
+                CategoryRowView(selectedId: $selectedCategoryId)
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 12) {
                         // 1. 公告栏（稍微往下移一点）
                         AnnouncementView()
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
-                        
-                        // 2. 分类栏
-                        CategoryRowView(selectedId: $selectedCategoryId)
-                            .padding(.horizontal, 12)
                         
                         // 3. 商品网格
                         ProductGridView(
