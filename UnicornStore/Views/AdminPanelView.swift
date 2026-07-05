@@ -123,10 +123,12 @@ struct AdminPanelView: View {
                 }
                 .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
             )
-            .alert("操作完成", isPresented: $showExportAlert) {
-                Button("确定", role: .cancel) {}
-            } message: {
-                Text(exportMessage)
+            .alert(isPresented: $showExportAlert) {
+                Alert(
+                    title: Text("操作完成"),
+                    message: Text(exportMessage),
+                    dismissButton: .default(Text("确定"))
+                )
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -164,13 +166,10 @@ struct ProductListView: View {
                             editingProduct = product
                             showEditSheet = true
                         }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                deleteProduct = product
-                                showDeleteAlert = true
-                            } label: {
-                                Label("删除", systemImage: "trash")
-                            }
+                        // swipeActions requires iOS 15+, using onLongPress instead
+                        .onLongPressGesture(minimumDuration: 0.5) {
+                            deleteProduct = product
+                            showDeleteAlert = true
                         }
                 }
             }
@@ -183,15 +182,17 @@ struct ProductListView: View {
                     .environmentObject(dataStore)
             }
         }
-        .alert("确认删除", isPresented: $showDeleteAlert) {
-            Button("取消", role: .cancel) {}
-            Button("删除", role: .destructive) {
-                if let product = deleteProduct {
-                    dataStore.deleteProduct(product)
+        .alert(isPresented: $showDeleteAlert) {
+            Alert(
+                title: Text("确认删除"),
+                message: Text("确定要删除这个商品吗？此操作不可恢复。"),
+                primaryButton: .cancel(Text("取消")),
+                secondaryButton: .destructive(Text("删除")) {
+                    if let product = deleteProduct {
+                        dataStore.deleteProduct(product)
+                    }
                 }
-            }
-        } message: {
-            Text("确定要删除这个商品吗？此操作不可恢复。")
+            )
         }
     }
 }
