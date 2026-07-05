@@ -14,7 +14,6 @@ struct AdminPanelView: View {
     @State private var showFileImporter = false
     @State private var showImportAlert = false
     @State private var importMessage = ""
-    @State private var documentPickerHandler = DocumentPickerHandler()
     
     private var themeColor: Color {
         dataStore.storeData.themeColor.toColor()
@@ -106,27 +105,6 @@ struct AdminPanelView: View {
                     }
                     
                     Button(action: {
-                        documentPickerHandler = DocumentPickerHandler()
-                        documentPickerHandler.onPick = { url in
-                            // 读取文件并导入数据
-                            let didAccess = url.startAccessingSecurityScopedResource()
-                            defer {
-                                if didAccess {
-                                    url.stopAccessingSecurityScopedResource()
-                                }
-                            }
-                            do {
-                                let data = try Data(contentsOf: url)
-                                if dataStore.importData(data) {
-                                    importMessage = "数据导入成功！"
-                                } else {
-                                    importMessage = "导入失败：数据格式不正确"
-                                }
-                            } catch {
-                                importMessage = "导入失败：\(error.localizedDescription)"
-                            }
-                            showImportAlert = true
-                        }
                         showFileImporter = true
                     }) {
                         HStack {
@@ -181,7 +159,9 @@ struct AdminPanelView: View {
                 }
             }
             .sheet(isPresented: $showFileImporter) {
-                DocumentPickerView(handler: documentPickerHandler)
+                DocumentPickerView { url in
+                    importFile(url: url)
+                }
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -195,6 +175,26 @@ struct AdminPanelView: View {
             exportMessage = "导出失败，请重试"
             showExportAlert = true
         }
+    }
+    
+    private func importFile(url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            if dataStore.importData(data) {
+                importMessage = "数据导入成功！"
+            } else {
+                importMessage = "导入失败：数据格式不正确"
+            }
+        } catch {
+            importMessage = "导入失败：\(error.localizedDescription)"
+        }
+        showImportAlert = true
     }
 }
 
@@ -624,24 +624,35 @@ struct SwipeToDeleteRow<Content: View>: View {
     }
 }
 
-// MARK: - 文件选择器（UIViewControllerRepresentable 包装，比 .fileImporter 更稳定）
-class DocumentPickerHandler: NSObject, UIDocumentPickerDelegate {
-    var onPick: ((URL) -> Void)?
-    
-    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-        guard let url = urls.first else { return }
-        onPick?(url)
-    }
-}
-
+// MARK: - 文件选择器（UIViewControllerRepresentable + Coordinator，稳定可靠）
 struct DocumentPickerView: UIViewControllerRepresentable {
-    let handler: DocumentPickerHandler
+    let onPick: (URL) -> Void
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json], asCopy: true)
-        picker.delegate = handler
+        picker.delegate = context.coordinator
         return picker
     }
     
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {
+        // 更新时重新设置 delegate，确保状态同步
+        uiViewController.delegate = context.coordinator
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        
+        init(onPick: @escaping (URL) -> Void) {
+            self.onPick = onPick
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
+        }
+    }
 }
