@@ -86,8 +86,7 @@ struct MainContentView: View {
             Text(dataStore.storeData.storeName)
                 .font(.system(size: dataStore.storeData.storeNameFontSize, weight: .bold))
                 .foregroundColor(dataStore.storeData.storeNameColor.toColor())
-                .background(dataStore.storeData.storeNameBgColor.toColor())
-            
+
             Spacer()
             
             // 显示/隐藏价格开关
@@ -120,7 +119,7 @@ struct MainContentView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color.white)
+        .background(dataStore.storeData.storeNameBgColor.toColor())
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
     }
 }
