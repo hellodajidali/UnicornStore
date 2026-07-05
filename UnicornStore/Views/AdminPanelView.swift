@@ -161,20 +161,34 @@ struct AdminPanelView: View {
             .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.json]) { result in
                 switch result {
                 case .success(let url):
+                    // 安全作用域 URL 必须先申请访问权限
+                    let didAccess = url.startAccessingSecurityScopedResource()
+                    defer {
+                        if didAccess {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
                     do {
                         let data = try Data(contentsOf: url)
-                        if dataStore.importData(data) {
-                            importMessage = "数据导入成功！"
-                        } else {
-                            importMessage = "导入失败：数据格式不正确"
+                        DispatchQueue.main.async {
+                            if dataStore.importData(data) {
+                                importMessage = "数据导入成功！"
+                            } else {
+                                importMessage = "导入失败：数据格式不正确"
+                            }
+                            showImportAlert = true
                         }
                     } catch {
-                        importMessage = "导入失败：\\(error.localizedDescription)"
+                        DispatchQueue.main.async {
+                            importMessage = "导入失败：\(error.localizedDescription)"
+                            showImportAlert = true
+                        }
                     }
-                    showImportAlert = true
                 case .failure(let error):
-                    importMessage = "选择文件失败：\\(error.localizedDescription)"
-                    showImportAlert = true
+                    DispatchQueue.main.async {
+                        importMessage = "选择文件失败：\(error.localizedDescription)"
+                        showImportAlert = true
+                    }
                 }
             }
         }

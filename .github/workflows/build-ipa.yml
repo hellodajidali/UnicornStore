@@ -1,46 +1,47 @@
 name: Build IPA
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Show Xcode version
+      - name: Check Xcode version
         run: |
           xcodebuild -version
           swift --version
 
       - name: Install XcodeGen
-        run: |
-          brew install xcodegen
+        run: brew install xcodegen
 
       - name: Generate Xcode project
-        run: |
-          xcodegen generate --spec project.yml
+        run: xcodegen generate --spec project.yml
 
       - name: Build .app
         run: |
-          xcodebuild \
-            -project UnicornStore.xcodeproj \
-            -scheme UnicornStore \
-            -sdk iphoneos \
-            -configuration Release \
-            -derivedDataPath Build \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee build.log
+          xcodebuild -project UnicornStore.xcodeproj -scheme UnicornStore \
+            -sdk iphoneos -configuration Release -derivedDataPath Build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload build log (even on failure)
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r Build/Build/Products/Release-iphoneos/UnicornStore.app Payload/
+          zip -r UnicornStore.ipa Payload/
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnicornStore-IPA
+          path: UnicornStore.ipa
+          compression-level: 0
+
+      - name: Upload build log (for debugging)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -51,30 +52,6 @@ jobs:
       - name: Show compilation errors
         if: failure()
         run: |
-          echo "=== Swift Compilation Errors ==="
-          grep -n "error:" build.log | grep -i "\.swift" | head -20 || echo "No Swift errors found in log"
-          echo "=== All errors from log ==="
-          grep -n "error:" build.log | head -30 | while IFS= read -r line; do echo "::error::$line"; done
-          echo "=== Last 30 lines of build ==="
+          grep -n "error:" build.log | head -30 | \
+            while IFS= read -r line; do echo "::error::$line"; done
           tail -30 build.log
-
-      - name: Package .app into IPA
-        run: |
-          mkdir -p Payload
-          cp -r "Build/Build/Products/Release-iphoneos/UnicornStore.app" Payload/
-          zip -r UnicornStore.ipa Payload/
-          rm -rf Payload
-
-      - name: Upload IPA as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UnicornStore-IPA
-          path: UnicornStore.ipa
-          compression-level: 0
-
-      - name: Upload .app as artifact (备用)
-        uses: actions/upload-artifact@v4
-        with:
-          name: UnicornStore-App
-          path: Build/Build/Products/Release-iphoneos/UnicornStore.app
-          compression-level: 0
