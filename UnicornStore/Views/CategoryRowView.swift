@@ -19,7 +19,9 @@ struct CategoryRowView: View {
                         category: category,
                         isSelected: selectedId == category.id,
                         action: {
-                            selectedId = category.id
+                            DispatchQueue.main.async {
+                                selectedId = category.id
+                            }
                         }
                     )
                 }
@@ -37,20 +39,21 @@ struct CategoryChip: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
-            Text(category.name)
-                .font(.system(size: isSelected ? category.fontSize + 1 : category.fontSize, weight: isSelected ? .bold : .regular))
-                .foregroundColor(isSelected ? .white : category.textColor.toColor())
-                .padding(.horizontal, 18)
-                .padding(.vertical, 8)
-                .background(
-                    isSelected ?
-                        DataStore.shared.storeData.themeColor.toColor() :
-                        DataStore.shared.storeData.themeColor.toColor().opacity(0.1)
-                )
-                .cornerRadius(18)
-        }
-        .buttonStyle(BorderlessButtonStyle())
+        Text(category.name)
+            .font(.system(size: isSelected ? category.fontSize + 1 : category.fontSize, weight: isSelected ? .bold : .regular))
+            .foregroundColor(isSelected ? .white : category.textColor.toColor())
+            .padding(.horizontal, 18)
+            .padding(.vertical, 8)
+            .background(
+                isSelected ?
+                    DataStore.shared.storeData.themeColor.toColor() :
+                    DataStore.shared.storeData.themeColor.toColor().opacity(0.1)
+            )
+            .cornerRadius(18)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                action()
+            }
     }
 }
 

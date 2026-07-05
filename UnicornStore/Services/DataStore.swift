@@ -100,6 +100,10 @@ class DataStore: ObservableObject {
         storeData.products.removeAll { $0.id == product.id }
     }
     
+    func moveProduct(from source: IndexSet, to destination: Int) {
+        storeData.products.move(fromOffsets: source, toOffset: destination)
+    }
+    
     // MARK: - 分类操作
     
     func addCategory(_ name: String) {

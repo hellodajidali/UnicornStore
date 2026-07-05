@@ -341,6 +341,7 @@ struct ProductListView: View {
     @State private var deleteProduct: Product?
     @State private var showDeleteAlert = false
     @State private var filterCategoryId: UUID? = nil
+    @State private var editMode: EditMode = .inactive
     
     private var filteredProducts: [Product] {
         if let catId = filterCategoryId {
@@ -401,36 +402,73 @@ struct ProductListView: View {
                     }
                 } else {
                     ForEach(filteredProducts) { product in
-                        ProductRowView(product: product)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                editingProduct = product
-                            }
-                            .onLongPressGesture(minimumDuration: 0.5) {
-                                deleteProduct = product
-                                showDeleteAlert = true
-                            }
+                        SwipeToDeleteRow {
+                            ProductRowView(product: product)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    editingProduct = product
+                                }
+                        } onDelete: {
+                            dataStore.deleteProduct(product)
+                        }
                     }
+                    .onMove(perform: moveProduct)
                 }
             }
             .listStyle(InsetGroupedListStyle())
+            .environment(\.editMode, $editMode)
         }
         .navigationTitle("商品列表 (\(filteredProducts.count))")
+        .navigationBarItems(
+            trailing: HStack {
+                if editMode == .active {
+                    Button("完成") {
+                        editMode = .inactive
+                    }
+                } else {
+                    Button("排序") {
+                        editMode = .active
+                    }
+                }
+            }
+        )
         .sheet(item: $editingProduct) { product in
             EditProductView(product: product)
                 .environmentObject(dataStore)
         }
-        .alert(isPresented: $showDeleteAlert) {
-            Alert(
-                title: Text("确认删除"),
-                message: Text("确定要删除这个商品吗？此操作不可恢复。"),
-                primaryButton: .cancel(Text("取消")),
-                secondaryButton: .destructive(Text("删除")) {
-                    if let product = deleteProduct {
-                        dataStore.deleteProduct(product)
-                    }
+    }
+    
+    private func moveProduct(from source: IndexSet, to destination: Int) {
+        // 如果按分类筛选，需要映射到原始数组的index
+        if let catId = filterCategoryId {
+            // 从筛选结果映射到原始products数组
+            let movingItems = source.map { filteredProducts[$0] }
+            var allProducts = dataStore.storeData.products
+            
+            // 先移除要移动的商品
+            for item in movingItems {
+                allProducts.removeAll { $0.id == item.id }
+            }
+            
+            // 计算目标位置在原始数组中的index
+            let destProduct: Product?
+            if destination < filteredProducts.count {
+                destProduct = filteredProducts[destination]
+            } else {
+                destProduct = nil
+            }
+            
+            if let destProduct = destProduct, let insertIndex = allProducts.firstIndex(where: { $0.id == destProduct.id }) {
+                for item in movingItems.reversed() {
+                    allProducts.insert(item, at: insertIndex)
                 }
-            )
+            } else {
+                allProducts.append(contentsOf: movingItems)
+            }
+            
+            dataStore.storeData.products = allProducts
+        } else {
+            dataStore.moveProduct(from: source, to: destination)
         }
     }
 }
@@ -485,5 +523,69 @@ struct ProductRowView: View {
                 .foregroundColor(.gray)
         }
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - 滑动删除容器（兼容iOS 14+）
+//
+struct SwipeToDeleteRow<Content: View>: View {
+    let content: Content
+    let onDelete: () -> Void
+    
+    @State private var offsetX: CGFloat = 0
+    @State private var showDelete = false
+    private let deleteButtonWidth: CGFloat = 80
+    
+    init(@ViewBuilder content: () -> Content, onDelete: @escaping () -> Void) {
+        self.content = content()
+        self.onDelete = onDelete
+    }
+    
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            // 删除按钮（在内容后面）
+            HStack {
+                Spacer()
+                Button(action: {
+                    onDelete()
+                }) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 18))
+                        Text("删除")
+                            .font(.system(size: 12))
+                    }
+                    .foregroundColor(.white)
+                    .frame(width: deleteButtonWidth, height: 80)
+                    .background(Color.red)
+                }
+                .buttonStyle(BorderlessButtonStyle())
+            }
+            
+            // 主要内容
+            content
+                .background(Color(.systemBackground))
+                .offset(x: offsetX)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if value.translation.width < 0 {
+                                offsetX = max(-deleteButtonWidth, value.translation.width)
+                            }
+                        }
+                        .onEnded { value in
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                if value.translation.width < -deleteButtonWidth * 0.4 {
+                                    offsetX = -deleteButtonWidth
+                                    showDelete = true
+                                } else {
+                                    offsetX = 0
+                                    showDelete = false
+                                }
+                            }
+                        }
+                )
+        }
+        .clipped()
     }
 }

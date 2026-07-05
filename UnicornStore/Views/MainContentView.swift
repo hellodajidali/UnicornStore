@@ -88,6 +88,18 @@ struct MainContentView: View {
             
             Spacer()
             
+            // 显示/隐藏价格开关
+            Button(action: {
+                dataStore.storeData.showPrice.toggle()
+            }) {
+                Image(systemName: dataStore.storeData.showPrice ? "eye.fill" : "eye.slash.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(dataStore.storeData.showPrice ? themeColor : .gray)
+                    .frame(width: 36, height: 36)
+                    .background(themeColor.opacity(0.1))
+                    .cornerRadius(18)
+            }
+            
             Button(action: {
                 showAdmin = true
             }) {

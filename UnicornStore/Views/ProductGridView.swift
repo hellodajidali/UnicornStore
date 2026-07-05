@@ -56,7 +56,7 @@ struct ProductCard: View {
     @State private var scale: CGFloat = 1.0
     
     var body: some View {
-        VStack(alignment: .center, spacing: 6) {
+        VStack(alignment: .center, spacing: 4) {
             // 商品图片
             ZStack {
                 if let image = product.image {
@@ -92,7 +92,6 @@ struct ProductCard: View {
                 }
             }
             .cornerRadius(8)
-            .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
             .scaleEffect(scale)
             .gesture(
                 TapGesture(count: 2)
@@ -118,16 +117,27 @@ struct ProductCard: View {
                 .foregroundColor(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-                .frame(height: 36)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 6)
+                .padding(.top, 6)
             
             // 价格（可隐藏）
             if dataStore.storeData.showPrice {
                 Text(product.price)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.orange)
+                    .padding(.bottom, 8)
+            } else {
+                // 即使没有价格也保持底部间距一致
+                Spacer().frame(height: 8)
             }
         }
-        .padding(.bottom, 4)
+        .frame(width: cardWidth)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        )
     }
     
     private var cardWidth: CGFloat {
