@@ -50,7 +50,7 @@ struct CategoryChip: View {
                 )
                 .cornerRadius(18)
         }
-        .buttonStyle(PlainButtonStyle()) // 避免 Button 默认样式干扰
+        .buttonStyle(BorderlessButtonStyle())
     }
 }
 

@@ -355,35 +355,23 @@ struct ProductListView: View {
             if !dataStore.storeData.categories.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        // "全部" 按钮
-                        Button(action: {
-                            filterCategoryId = nil
-                        }) {
-                            Text("全部")
-                                .font(.system(size: 14, weight: filterCategoryId == nil ? .bold : .regular))
-                                .foregroundColor(filterCategoryId == nil ? .white : dataStore.storeData.themeColor.toColor())
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(
-                                    filterCategoryId == nil ?
-                                        dataStore.storeData.themeColor.toColor() :
-                                        dataStore.storeData.themeColor.toColor().opacity(0.1)
-                                )
-                                .cornerRadius(14)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                        
-                        ForEach(dataStore.storeData.categories.filter { $0.name != "全部" }) { category in
+                        ForEach(dataStore.storeData.categories) { category in
+                            let isAll = category.name == "全部"
+                            let isSelected = isAll ? (filterCategoryId == nil) : (filterCategoryId == category.id)
                             Button(action: {
-                                filterCategoryId = category.id
+                                if isAll {
+                                    filterCategoryId = nil
+                                } else {
+                                    filterCategoryId = category.id
+                                }
                             }) {
                                 Text(category.name)
-                                    .font(.system(size: 14, weight: filterCategoryId == category.id ? .bold : .regular))
-                                    .foregroundColor(filterCategoryId == category.id ? .white : dataStore.storeData.themeColor.toColor())
+                                    .font(.system(size: 14, weight: isSelected ? .bold : .regular))
+                                    .foregroundColor(isSelected ? .white : dataStore.storeData.themeColor.toColor())
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 6)
                                     .background(
-                                        filterCategoryId == category.id ?
+                                        isSelected ?
                                             dataStore.storeData.themeColor.toColor() :
                                             dataStore.storeData.themeColor.toColor().opacity(0.1)
                                     )
@@ -427,7 +415,7 @@ struct ProductListView: View {
             }
             .listStyle(InsetGroupedListStyle())
         }
-        .navigationTitle("商品列表 (\\(filteredProducts.count))")
+        .navigationTitle("商品列表 (\(filteredProducts.count))")
         .sheet(item: $editingProduct) { product in
             EditProductView(product: product)
                 .environmentObject(dataStore)

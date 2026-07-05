@@ -94,25 +94,22 @@ struct ProductCard: View {
             .cornerRadius(8)
             .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
             .scaleEffect(scale)
-            // 改用闭包回调
             .gesture(
                 TapGesture(count: 2)
                     .onEnded {
                         onEnlarge?(product)
                     }
-            )
-            .highPriorityGesture(
-                TapGesture(count: 1)
-                    .onEnded {
-                        withAnimation(.spring(response: 0.2)) {
-                            scale = 0.95
-                        }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    .simultaneously(with: TapGesture(count: 1)
+                        .onEnded {
                             withAnimation(.spring(response: 0.2)) {
-                                scale = 1.0
+                                scale = 0.95
                             }
-                        }
-                    }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation(.spring(response: 0.2)) {
+                                    scale = 1.0
+                                }
+                            }
+                        })
             )
             
             // 商品名称
