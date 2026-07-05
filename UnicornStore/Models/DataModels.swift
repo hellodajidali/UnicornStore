@@ -27,7 +27,7 @@ struct StoreData: Codable {
     var themeColor: String  // hex颜色
     
     static func defaultData() -> StoreData {
-        let allCategory = Category(id: UUID(), name: "全部分类")
+        let allCategory = Category(id: UUID(), name: "全部")
         let cat1 = Category(id: UUID(), name: "热门推荐")
         let cat2 = Category(id: UUID(), name: "新品上架")
         

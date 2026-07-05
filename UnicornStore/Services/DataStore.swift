@@ -108,7 +108,7 @@ class DataStore: ObservableObject {
     }
     
     func deleteCategory(_ category: Category) {
-        if category.name == "全部分类" { return }
+        if category.name == "全部" { return }
         // 使用 index 方式删除，确保只删除一个
         if let index = storeData.categories.firstIndex(where: { $0.id == category.id }) {
             storeData.categories.remove(at: index)

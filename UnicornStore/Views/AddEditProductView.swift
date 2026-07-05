@@ -94,11 +94,30 @@ struct AddProductView: View {
                     }
                     .pickerStyle(MenuPickerStyle())
                     .onAppear {
-                        // 默认选中第一个非"全部分类"的分类，或者第一个分类
-                        if selectedCategoryId == nil, let first = dataStore.storeData.categories.first {
-                            selectedCategoryId = first.id
+                        // 默认选中第一个非"全部"的分类
+                        if selectedCategoryId == nil {
+                            let firstReal = dataStore.storeData.categories.first(where: { $0.name != "全部" })
+                            selectedCategoryId = firstReal?.id ?? dataStore.storeData.categories.first?.id
                         }
                     }
+                    
+                    // 显示当前选中的分类
+                    HStack {
+                        Text("当前选中：")
+                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                        if let catId = selectedCategoryId,
+                           let cat = dataStore.storeData.categories.first(where: { $0.id == catId }) {
+                            Text(cat.name)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(dataStore.storeData.themeColor.toColor())
+                        } else {
+                            Text("未选择")
+                                .foregroundColor(.red)
+                                .font(.subheadline)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
             
@@ -241,6 +260,24 @@ struct EditProductView: View {
                     }
                     .pickerStyle(MenuPickerStyle())
                     .onChange(of: selectedCategoryId) { _ in hasChanges = true }
+                    
+                    // 显示当前选中的分类
+                    HStack {
+                        Text("当前选中：")
+                            .foregroundColor(.gray)
+                            .font(.subheadline)
+                        if let catId = selectedCategoryId,
+                           let cat = dataStore.storeData.categories.first(where: { $0.id == catId }) {
+                            Text(cat.name)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(dataStore.storeData.themeColor.toColor())
+                        } else {
+                            Text("未选择")
+                                .foregroundColor(.red)
+                                .font(.subheadline)
+                        }
+                    }
+                    .padding(.top, 4)
                 }
             }
             

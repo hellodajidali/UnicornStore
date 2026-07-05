@@ -340,37 +340,94 @@ struct ProductListView: View {
     @State private var editingProduct: Product?
     @State private var deleteProduct: Product?
     @State private var showDeleteAlert = false
+    @State private var filterCategoryId: UUID? = nil
+    
+    private var filteredProducts: [Product] {
+        if let catId = filterCategoryId {
+            return dataStore.storeData.products.filter { $0.categoryId == catId }
+        }
+        return dataStore.storeData.products
+    }
     
     var body: some View {
-        List {
-            if dataStore.storeData.products.isEmpty {
-                Section {
-                    VStack(spacing: 12) {
-                        Image(systemName: "shippingbox")
-                            .font(.system(size: 40))
-                            .foregroundColor(.gray.opacity(0.5))
-                        Text("暂无商品")
-                            .foregroundColor(.gray)
-                            .padding(.vertical, 20)
+        VStack(spacing: 0) {
+            // 分类筛选栏
+            if !dataStore.storeData.categories.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        // "全部" 按钮
+                        Button(action: {
+                            filterCategoryId = nil
+                        }) {
+                            Text("全部")
+                                .font(.system(size: 14, weight: filterCategoryId == nil ? .bold : .regular))
+                                .foregroundColor(filterCategoryId == nil ? .white : dataStore.storeData.themeColor.toColor())
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(
+                                    filterCategoryId == nil ?
+                                        dataStore.storeData.themeColor.toColor() :
+                                        dataStore.storeData.themeColor.toColor().opacity(0.1)
+                                )
+                                .cornerRadius(14)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        
+                        ForEach(dataStore.storeData.categories.filter { $0.name != "全部" }) { category in
+                            Button(action: {
+                                filterCategoryId = category.id
+                            }) {
+                                Text(category.name)
+                                    .font(.system(size: 14, weight: filterCategoryId == category.id ? .bold : .regular))
+                                    .foregroundColor(filterCategoryId == category.id ? .white : dataStore.storeData.themeColor.toColor())
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 6)
+                                    .background(
+                                        filterCategoryId == category.id ?
+                                            dataStore.storeData.themeColor.toColor() :
+                                            dataStore.storeData.themeColor.toColor().opacity(0.1)
+                                    )
+                                    .cornerRadius(14)
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                        }
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                 }
-            } else {
-                ForEach(dataStore.storeData.products) { product in
-                    ProductRowView(product: product)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            editingProduct = product
+                .background(Color(.systemGroupedBackground))
+            }
+            
+            List {
+                if filteredProducts.isEmpty {
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "shippingbox")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray.opacity(0.5))
+                            Text("暂无商品")
+                                .foregroundColor(.gray)
+                                .padding(.vertical, 20)
                         }
-                        .onLongPressGesture(minimumDuration: 0.5) {
-                            deleteProduct = product
-                            showDeleteAlert = true
-                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                } else {
+                    ForEach(filteredProducts) { product in
+                        ProductRowView(product: product)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                editingProduct = product
+                            }
+                            .onLongPressGesture(minimumDuration: 0.5) {
+                                deleteProduct = product
+                                showDeleteAlert = true
+                            }
+                    }
                 }
             }
+            .listStyle(InsetGroupedListStyle())
         }
-        .listStyle(InsetGroupedListStyle())
-        .navigationTitle("商品列表 (\(dataStore.storeData.products.count))")
+        .navigationTitle("商品列表 (\\(filteredProducts.count))")
         .sheet(item: $editingProduct) { product in
             EditProductView(product: product)
                 .environmentObject(dataStore)

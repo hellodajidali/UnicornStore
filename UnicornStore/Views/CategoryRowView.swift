@@ -17,17 +17,9 @@ struct CategoryRowView: View {
                 ForEach(categories) { category in
                     CategoryChip(
                         category: category,
-                        isSelected: selectedId == category.id ||
-                            (selectedId == nil && category.name == "全部分类"),
+                        isSelected: selectedId == category.id,
                         action: {
-                            // 使用 DispatchQueue.main.async 避免动画吞掉状态更新
-                            DispatchQueue.main.async {
-                                if selectedId == category.id {
-                                    selectedId = nil
-                                } else {
-                                    selectedId = category.id
-                                }
-                            }
+                            selectedId = category.id
                         }
                     )
                 }
@@ -92,7 +84,7 @@ struct CategoryEditView: View {
                         
                         Spacer()
                         
-                        if category.name != "全部分类" {
+                        if category.name != "全部" {
                             // 编辑字体和颜色
                             Button(action: {
                                 editingCategoryFontColor = category
@@ -105,6 +97,7 @@ struct CategoryEditView: View {
                                     .foregroundColor(.blue)
                             }
                             .buttonStyle(BorderlessButtonStyle())
+                            .padding(.leading, 4)
                             
                             // 编辑名称
                             Button(action: {
@@ -117,6 +110,7 @@ struct CategoryEditView: View {
                                     .foregroundColor(.blue)
                             }
                             .buttonStyle(BorderlessButtonStyle())
+                            .padding(.leading, 12)
                             
                             // 删除
                             Button(action: {
@@ -128,6 +122,7 @@ struct CategoryEditView: View {
                                     .foregroundColor(.red)
                             }
                             .buttonStyle(BorderlessButtonStyle())
+                            .padding(.leading, 12)
                         }
                     }
                     .padding(.vertical, 4)

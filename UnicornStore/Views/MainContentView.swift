@@ -70,6 +70,11 @@ struct MainContentView: View {
                 AdminPanelView()
                     .environmentObject(dataStore)
             }
+            .onAppear {
+                if selectedCategoryId == nil {
+                    selectedCategoryId = dataStore.storeData.categories.first?.id
+                }
+            }
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
