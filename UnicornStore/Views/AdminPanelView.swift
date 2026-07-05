@@ -250,7 +250,7 @@ struct StoreNameEditView: View {
                 
                 // 背景颜色切换（和字体颜色相同色板 + 白色+灰色）
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("名称背景颜色：")
+                    Text("顶栏背景颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
