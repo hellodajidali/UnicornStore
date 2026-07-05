@@ -131,32 +131,23 @@ struct ImageDetailOverlay: View {
     @Binding var isShowing: Bool
     @State private var scale: CGFloat = 1.0
     @State private var lastScale: CGFloat = 1.0
+    /// 保留商品数据，让关闭动画期间图片不会突然消失
+    @State private var retainedProduct: Product? = nil
     
     var body: some View {
         ZStack {
-            if isShowing, let product = product {
+            // 始终渲染 ZStack，用 opacity 控制显隐，避免条件渲染导致的闪现问题
+            if isShowing || retainedProduct != nil {
                 // 半透明背景（单点关闭）
-                Color.black.opacity(0.9)
+                Color.black.opacity(isShowing ? 0.9 : 0)
                     .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isShowing = false
-                            scale = 1.0
-                            lastScale = 1.0
-                        }
-                    }
+                    .onTapGesture(perform: dismiss)
                 
                 VStack(spacing: 12) {
                     // 关闭按钮
                     HStack {
                         Spacer()
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                isShowing = false
-                                scale = 1.0
-                                lastScale = 1.0
-                            }
-                        }) {
+                        Button(action: dismiss) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 28))
                                 .foregroundColor(.white.opacity(0.7))
@@ -164,8 +155,8 @@ struct ImageDetailOverlay: View {
                     }
                     .padding(.horizontal, 20)
                     
-                    // 商品图片
-                    if let image = product.image {
+                    // 商品图片（优先用 retainedProduct 保证关闭动画期间图片不消失）
+                    if let image = (retainedProduct ?? product)?.image {
                         Image(uiImage: image)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
@@ -180,13 +171,7 @@ struct ImageDetailOverlay: View {
                                         lastScale = scale
                                     }
                             )
-                            .onTapGesture(count: 2) {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    isShowing = false
-                                    scale = 1.0
-                                    lastScale = 1.0
-                                }
-                            }
+                            .onTapGesture(count: 2, perform: dismiss)
                             .frame(maxWidth: UIScreen.main.bounds.width - 40)
                             .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
                     } else {
@@ -201,22 +186,24 @@ struct ImageDetailOverlay: View {
                     }
                     
                     // 商品信息
-                    VStack(spacing: 6) {
-                        Text(product.name)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                        
-                        if DataStore.shared.storeData.showPrice {
-                            Text(product.price)
-                                .font(.system(size: 22, weight: .bold))
-                                .foregroundColor(.orange)
-                        }
-                        
-                        if !product.description.isEmpty {
-                            Text(product.description)
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
-                                .padding(.horizontal)
+                    if let p = retainedProduct ?? product {
+                        VStack(spacing: 6) {
+                            Text(p.name)
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            if DataStore.shared.storeData.showPrice {
+                                Text(p.price)
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.orange)
+                            }
+                            
+                            if !p.description.isEmpty {
+                                Text(p.description)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.gray)
+                                    .padding(.horizontal)
+                            }
                         }
                     }
                     
@@ -226,10 +213,37 @@ struct ImageDetailOverlay: View {
                         .foregroundColor(.gray.opacity(0.6))
                         .padding(.top, 8)
                 }
-                .transition(.opacity)
+                .opacity(isShowing ? 1 : 0)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: isShowing)
+        .allowsHitTesting(isShowing)
+        .onChange(of: isShowing) { newValue in
+            if newValue {
+                // 打开时：保留当前商品数据
+                retainedProduct = product
+            } else {
+                // 关闭时：等动画彻底结束后再释放数据
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    if !isShowing {
+                        retainedProduct = nil
+                    }
+                }
+            }
+        }
+        .onAppear {
+            if isShowing {
+                retainedProduct = product
+            }
+        }
+    }
+    
+    private func dismiss() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            isShowing = false
+            scale = 1.0
+            lastScale = 1.0
+        }
     }
     
 }
