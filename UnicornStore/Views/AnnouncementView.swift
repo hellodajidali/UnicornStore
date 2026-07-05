@@ -28,7 +28,7 @@ struct AnnouncementView: View {
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .scrollDisabled(true)
+                // scrollDisabled requires iOS 16+, skipped for iOS 14 compat
                 
                 Spacer()
             }

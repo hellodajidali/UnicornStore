@@ -126,19 +126,18 @@ struct CategoryEditView: View {
                 .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
-        .alert("编辑分类名称", isPresented: $showEditAlert) {
-            TextField("分类名称", text: $editName)
-            Button("取消", role: .cancel) {}
-            Button("保存") {
-                if let cat = editingCategory {
-                    let trimmed = editName.trimmingCharacters(in: .whitespaces)
-                    if !trimmed.isEmpty {
-                        dataStore.renameCategory(cat, newName: trimmed)
-                    }
-                }
-            }
+        .alert(isPresented: $showEditAlert) {
+            Text("编辑分类名称")
         } message: {
             Text("请输入新的分类名称")
+        }
+        .onChange(of: showEditAlert) { showing in
+            if !showing, let cat = editingCategory {
+                let trimmed = editName.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    dataStore.renameCategory(cat, newName: trimmed)
+                }
+            }
         }
     }
 }
