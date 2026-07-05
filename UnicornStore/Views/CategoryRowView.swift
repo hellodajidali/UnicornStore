@@ -69,24 +69,21 @@ struct CategoryEditView: View {
     @State private var newCategoryName: String = ""
     @State private var editingCategory: Category? = nil
     @State private var editName: String = ""
-    @State private var showEditAlert = false
+    @State private var showRenameSheet = false
     @State private var categoryFontSize: CGFloat = 15
     @State private var categoryTextColor: String = "#663399"
     @State private var editingCategoryFontColor: Category? = nil
     @State private var showFontColorSheet = false
+    @State private var showDeleteConfirm: Category? = nil
     
-    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4"]
+    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
     
     var body: some View {
         Section(header: Text("分类管理").font(.headline)) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("当前分类（可编辑名称/字体大小/颜色）：")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                // 用快照数组防止删除时 ForEach 混乱
-                let categories = dataStore.storeData.categories
-                ForEach(categories) { category in
+                // 分类列表
+                let cats = dataStore.storeData.categories
+                ForEach(cats) { category in
                     HStack {
                         Text(category.name)
                             .font(.system(size: category.fontSize))
@@ -111,7 +108,7 @@ struct CategoryEditView: View {
                             Button(action: {
                                 editingCategory = category
                                 editName = category.name
-                                showEditAlert = true
+                                showRenameSheet = true
                             }) {
                                 Image(systemName: "pencil")
                                     .font(.system(size: 12))
@@ -120,7 +117,7 @@ struct CategoryEditView: View {
                             
                             // 删除
                             Button(action: {
-                                dataStore.deleteCategory(category)
+                                showDeleteConfirm = category
                             }) {
                                 Image(systemName: "minus.circle.fill")
                                     .font(.system(size: 16))
@@ -152,20 +149,50 @@ struct CategoryEditView: View {
                 .disabled(newCategoryName.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
-        .alert(isPresented: $showEditAlert) {
-            Alert(
-                title: Text("编辑分类名称"),
-                message: Text("请输入新的分类名称"),
-                dismissButton: .default(Text("确定")) {
-                    if let cat = editingCategory {
-                        let trimmed = editName.trimmingCharacters(in: .whitespaces)
-                        if !trimmed.isEmpty {
-                            dataStore.renameCategory(cat, newName: trimmed)
+        // 重命名弹窗
+        .sheet(isPresented: $showRenameSheet) {
+            NavigationView {
+                VStack(spacing: 20) {
+                    Text("编辑分类名称")
+                        .font(.headline)
+                        .padding(.top)
+                    
+                    TextField("输入新名称", text: $editName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                    
+                    Spacer()
+                }
+                .navigationBarItems(
+                    leading: Button("取消") {
+                        showRenameSheet = false
+                    },
+                    trailing: Button("保存") {
+                        if let cat = editingCategory {
+                            let trimmed = editName.trimmingCharacters(in: .whitespaces)
+                            if !trimmed.isEmpty {
+                                dataStore.renameCategory(cat, newName: trimmed)
+                            }
                         }
+                        showRenameSheet = false
                     }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(dataStore.storeData.themeColor.toColor())
+                )
+            }
+        }
+        // 删除确认
+        .alert(item: $showDeleteConfirm) { category in
+            Alert(
+                title: Text("删除分类"),
+                message: Text("确定要删除「\(category.name)」吗？该分类下的商品不会自动删除。"),
+                primaryButton: .cancel(Text("取消")),
+                secondaryButton: .destructive(Text("删除")) {
+                    dataStore.deleteCategory(category)
                 }
             )
         }
+        // 字体/颜色设置
         .sheet(isPresented: $showFontColorSheet) {
             NavigationView {
                 Form {

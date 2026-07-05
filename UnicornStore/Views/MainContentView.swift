@@ -31,9 +31,10 @@ struct MainContentView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 12) {
-                        // 1. 公告栏
+                        // 1. 公告栏（稍微往下移一点）
                         AnnouncementView()
                             .padding(.horizontal, 12)
+                            .padding(.top, 8)
                         
                         // 2. 分类栏
                         CategoryRowView(selectedId: $selectedCategoryId)
@@ -116,14 +117,35 @@ struct ImageDetailOverlay: View {
     var body: some View {
         ZStack {
             if isShowing, let product = product {
-                // 半透明背景
+                // 半透明背景（单点关闭）
                 Color.black.opacity(0.9)
                     .ignoresSafeArea()
-                    .onTapGesture(count: 2) {
-                        handleDoubleTap()
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isShowing = false
+                            scale = 1.0
+                            lastScale = 1.0
+                        }
                     }
                 
                 VStack(spacing: 12) {
+                    // 关闭按钮
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                isShowing = false
+                                scale = 1.0
+                                lastScale = 1.0
+                            }
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
                     // 商品图片
                     if let image = product.image {
                         Image(uiImage: image)
@@ -177,7 +199,7 @@ struct ImageDetailOverlay: View {
                     }
                     
                     // 操作提示
-                    Text(scale > 1.0 ? "双击图片缩小" : "双击图片关闭")
+                    Text(scale > 1.0 ? "双击缩小" : "双击放大")
                         .font(.system(size: 12))
                         .foregroundColor(.gray.opacity(0.6))
                         .padding(.top, 8)
@@ -195,10 +217,9 @@ struct ImageDetailOverlay: View {
                 scale = 1.0
                 lastScale = 1.0
             } else {
-                // 默认大小 → 关闭
-                isShowing = false
-                scale = 1.0
-                lastScale = 1.0
+                // 默认大小 → 放大到2.5倍
+                scale = 2.5
+                lastScale = 2.5
             }
         }
     }

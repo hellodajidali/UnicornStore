@@ -44,7 +44,7 @@ struct AnnouncementEditView: View {
     @State private var textColor: String = "#663399"
     @State private var showColorPicker = false
     
-    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4"]
+    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
     
     var body: some View {
         Section(header: Text("公告栏").font(.headline)) {

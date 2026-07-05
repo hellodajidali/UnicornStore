@@ -150,33 +150,30 @@ struct GridLayoutEditView: View {
     @EnvironmentObject var dataStore: DataStore
     
     var body: some View {
-        Section(header: Text("商品布局").font(.headline)) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("选择每行显示的商品数量（2~5排）：")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                
-                HStack(spacing: 12) {
-                    ForEach(2...5, id: \.self) { num in
-                        Button(action: {
-                            // 直接修改 store，不再使用本地 State
-                            dataStore.storeData.gridColumns = num
-                        }) {
-                            Text("\(num)排")
-                                .font(.system(size: 16, weight: dataStore.storeData.gridColumns == num ? .bold : .regular))
-                                .foregroundColor(dataStore.storeData.gridColumns == num ? .white : dataStore.storeData.themeColor.toColor().opacity(0.7))
-                                .frame(width: 60, height: 40)
-                                .background(
-                                    dataStore.storeData.gridColumns == num ?
-                                        dataStore.storeData.themeColor.toColor() :
-                                        dataStore.storeData.themeColor.toColor().opacity(0.1)
-                                )
-                                .cornerRadius(10)
-                        }
+        VStack(alignment: .leading, spacing: 10) {
+            Text("选择每行显示的商品数量（2~5排）：")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            HStack(spacing: 12) {
+                ForEach(2...5, id: \.self) { num in
+                    Button(action: {
+                        dataStore.storeData.gridColumns = num
+                    }) {
+                        Text("\(num)排")
+                            .font(.system(size: 16, weight: dataStore.storeData.gridColumns == num ? .bold : .regular))
+                            .foregroundColor(dataStore.storeData.gridColumns == num ? .white : dataStore.storeData.themeColor.toColor().opacity(0.7))
+                            .frame(width: 60, height: 40)
+                            .background(
+                                dataStore.storeData.gridColumns == num ?
+                                    dataStore.storeData.themeColor.toColor() :
+                                    dataStore.storeData.themeColor.toColor().opacity(0.1)
+                            )
+                            .cornerRadius(10)
                     }
                 }
             }
-            .padding(.vertical, 4)
         }
+        .padding(.vertical, 4)
     }
 }

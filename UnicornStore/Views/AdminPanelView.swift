@@ -143,12 +143,7 @@ struct AdminPanelView: View {
     private func exportBackup() {
         if let url = dataStore.getBackupFileURL() {
             shareFileURL = url
-            exportMessage = "备份文件已生成，即将打开分享面板\n你可以通过 AirDrop、文件App 等方式保存"
-            showExportAlert = true
-            // 延迟弹出分享面板
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                showShareSheet = true
-            }
+            showShareSheet = true
         } else {
             exportMessage = "导出失败，请重试"
             showExportAlert = true
@@ -239,7 +234,7 @@ struct ThemeColorEditView: View {
     @EnvironmentObject var dataStore: DataStore
     @State private var themeColor: String = "#9966CC"
     
-    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12"]
+    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12", "#FFFFFF"]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -267,11 +262,15 @@ struct ThemeColorEditView: View {
             
             Text("当前主题色预览")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(themeColor == "#FFFFFF" || themeColor == "#FFEAA7" ? .black : .white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .background(themeColor.toColor())
                 .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(themeColor == "#FFFFFF" ? Color.gray.opacity(0.3) : Color.clear, lineWidth: 1)
+                )
         }
         .padding(.vertical, 4)
         .onAppear {
@@ -298,7 +297,6 @@ struct ShareSheet: UIViewControllerRepresentable {
 struct ProductListView: View {
     @EnvironmentObject var dataStore: DataStore
     @State private var editingProduct: Product?
-    @State private var showEditSheet = false
     @State private var deleteProduct: Product?
     @State private var showDeleteAlert = false
     
@@ -321,11 +319,7 @@ struct ProductListView: View {
                     ProductRowView(product: product)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            // 先设置商品再弹出 sheet
                             editingProduct = product
-                            DispatchQueue.main.async {
-                                showEditSheet = true
-                            }
                         }
                         .onLongPressGesture(minimumDuration: 0.5) {
                             deleteProduct = product
@@ -336,12 +330,9 @@ struct ProductListView: View {
         }
         .listStyle(InsetGroupedListStyle())
         .navigationTitle("商品列表 (\(dataStore.storeData.products.count))")
-        .sheet(isPresented: $showEditSheet) {
-            // 确保 editingProduct 不为 nil
-            if let product = editingProduct {
-                EditProductView(product: product)
-                    .environmentObject(dataStore)
-            }
+        .sheet(item: $editingProduct) { product in
+            EditProductView(product: product)
+                .environmentObject(dataStore)
         }
         .alert(isPresented: $showDeleteAlert) {
             Alert(
