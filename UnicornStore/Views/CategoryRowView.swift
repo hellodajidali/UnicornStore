@@ -29,7 +29,6 @@ struct CategoryRowView: View {
             .padding(.vertical, 4)
         }
         .frame(height: 48)
-        .contentShape(Rectangle())
     }
 }
 
@@ -41,21 +40,20 @@ struct CategoryChip: View {
     let action: () -> Void
     
     var body: some View {
-        Text(category.name)
-            .font(.system(size: isSelected ? category.fontSize + 1 : category.fontSize, weight: isSelected ? .bold : .regular))
-            .foregroundColor(isSelected ? .white : category.textColor.toColor())
-            .padding(.horizontal, 18)
-            .padding(.vertical, 8)
-            .background(
-                isSelected ?
-                    DataStore.shared.storeData.themeColor.toColor() :
-                    DataStore.shared.storeData.themeColor.toColor().opacity(0.1)
-            )
-            .cornerRadius(18)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                action()
-            }
+        Button(action: action) {
+            Text(category.name)
+                .font(.system(size: isSelected ? category.fontSize + 1 : category.fontSize, weight: isSelected ? .bold : .regular))
+                .foregroundColor(isSelected ? .white : category.textColor.toColor())
+                .padding(.horizontal, 18)
+                .padding(.vertical, 8)
+                .background(
+                    isSelected ?
+                        DataStore.shared.storeData.themeColor.toColor() :
+                        DataStore.shared.storeData.themeColor.toColor().opacity(0.1)
+                )
+                .cornerRadius(18)
+        }
+        .buttonStyle(BorderlessButtonStyle())
     }
 }
 
