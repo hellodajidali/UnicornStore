@@ -45,7 +45,7 @@ struct AddProductView: View {
                                 VStack(spacing: 8) {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.system(size: 30))
-                                        .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
+                                        .foregroundColor(dataStore.storeData.themeColor.toColor())
                                     Text("点击添加图片")
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
@@ -89,9 +89,16 @@ struct AddProductView: View {
                     Picker("选择分类", selection: $selectedCategoryId) {
                         ForEach(dataStore.storeData.categories) { category in
                             Text(category.name).tag(category.id as UUID?)
+                                .font(.system(size: 15))
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
+                    .onAppear {
+                        // 默认选中第一个非"全部分类"的分类，或者第一个分类
+                        if selectedCategoryId == nil, let first = dataStore.storeData.categories.first {
+                            selectedCategoryId = first.id
+                        }
+                    }
                 }
             }
             
@@ -102,7 +109,7 @@ struct AddProductView: View {
                         .foregroundColor(isFormValid ? .white : .gray)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(isFormValid ? Color(red: 0.6, green: 0.2, blue: 0.6) : Color.gray.opacity(0.3))
+                        .background(isFormValid ? dataStore.storeData.themeColor.toColor() : Color.gray.opacity(0.3))
                         .cornerRadius(10)
                 }
                 .disabled(!isFormValid)
@@ -150,11 +157,11 @@ struct EditProductView: View {
     @State private var productImage: UIImage?
     @State private var showImagePicker = false
     @State private var hasChanges = false
+    @State private var isLoaded = false
     
     var body: some View {
         Form {
             Section(header: Text("商品信息").font(.headline)) {
-                // 图片
                 VStack(alignment: .leading, spacing: 8) {
                     Text("商品图片（点击更换）：")
                         .font(.subheadline)
@@ -178,7 +185,7 @@ struct EditProductView: View {
                                 VStack(spacing: 8) {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.system(size: 30))
-                                        .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
+                                        .foregroundColor(dataStore.storeData.themeColor.toColor())
                                     Text("点击添加图片")
                                         .font(.system(size: 14))
                                         .foregroundColor(.gray)
@@ -244,7 +251,7 @@ struct EditProductView: View {
                         .foregroundColor(hasChanges ? .white : .gray)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(hasChanges ? Color(red: 0.6, green: 0.2, blue: 0.6) : Color.gray.opacity(0.3))
+                        .background(hasChanges ? dataStore.storeData.themeColor.toColor() : Color.gray.opacity(0.3))
                         .cornerRadius(10)
                 }
                 .disabled(!hasChanges)
@@ -261,6 +268,10 @@ struct EditProductView: View {
     }
     
     private func loadProduct() {
+        // 防止重复加载
+        guard !isLoaded else { return }
+        isLoaded = true
+        
         name = product.name
         price = product.price
         description = product.description

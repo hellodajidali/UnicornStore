@@ -15,7 +15,6 @@ class DataStore: ObservableObject {
     private let fileName = "store_data.json"
     
     private init() {
-        // 尝试从磁盘加载，否则使用默认数据
         if let loaded = DataStore.loadFromDisk() {
             self.storeData = loaded
         } else {
@@ -34,7 +33,7 @@ class DataStore: ObservableObject {
         return documentsDirectory().appendingPathComponent(fileName)
     }
     
-    private func saveToDisk() {
+    func saveToDisk() {
         DispatchQueue.global(qos: .background).async { [weak self] in
             guard let self = self else { return }
             do {
@@ -48,7 +47,7 @@ class DataStore: ObservableObject {
         }
     }
     
-    private static func loadFromDisk() -> StoreData? {
+    static func loadFromDisk() -> StoreData? {
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
         guard let documentsPath = paths.first else { return nil }
         let filePath = (documentsPath as NSString).appendingPathComponent("store_data.json")
@@ -109,9 +108,11 @@ class DataStore: ObservableObject {
     }
     
     func deleteCategory(_ category: Category) {
-        // 不删除"全部分类"
         if category.name == "全部分类" { return }
-        storeData.categories.removeAll { $0.id == category.id }
+        // 使用 index 方式删除，确保只删除一个
+        if let index = storeData.categories.firstIndex(where: { $0.id == category.id }) {
+            storeData.categories.remove(at: index)
+        }
     }
     
     func renameCategory(_ category: Category, newName: String) {
@@ -120,7 +121,14 @@ class DataStore: ObservableObject {
         }
     }
     
-    // MARK: - 导出/导入数据（用于备份）
+    func updateCategoryStyle(_ category: Category, fontSize: CGFloat, textColor: String) {
+        if let index = storeData.categories.firstIndex(where: { $0.id == category.id }) {
+            storeData.categories[index].fontSize = fontSize
+            storeData.categories[index].textColor = textColor
+        }
+    }
+    
+    // MARK: - 导出/导入备份（分享 JSON 文件）
     
     func exportData() -> Data? {
         do {
@@ -140,6 +148,18 @@ class DataStore: ObservableObject {
             return true
         } catch {
             return false
+        }
+    }
+    
+    /// 获取备份文件保存路径（供 UIActivityViewController 使用）
+    func getBackupFileURL() -> URL? {
+        let fileURL = documentsDirectory().appendingPathComponent("雾化胖东来备份_\(Date().timeIntervalSince1970).json")
+        guard let data = exportData() else { return nil }
+        do {
+            try data.write(to: fileURL)
+            return fileURL
+        } catch {
+            return nil
         }
     }
 }

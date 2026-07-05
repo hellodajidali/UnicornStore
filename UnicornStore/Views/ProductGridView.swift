@@ -4,8 +4,13 @@ import SwiftUI
 
 struct ProductGridView: View {
     let products: [Product]
-    @Binding var enlargedProduct: Product?
+    let onEnlarge: ((Product) -> Void)?
     @EnvironmentObject var dataStore: DataStore
+    
+    init(products: [Product], onEnlarge: ((Product) -> Void)? = nil) {
+        self.products = products
+        self.onEnlarge = onEnlarge
+    }
     
     private var columns: Int {
         max(2, min(dataStore.storeData.gridColumns, 5))
@@ -34,14 +39,7 @@ struct ProductGridView: View {
             } else {
                 LazyVGrid(columns: gridItems, spacing: 12) {
                     ForEach(products) { product in
-                        ProductCard(
-                            product: product,
-                            onDoubleTap: {
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    enlargedProduct = product
-                                }
-                            }
-                        )
+                        ProductCard(product: product, onEnlarge: onEnlarge)
                     }
                 }
             }
@@ -53,7 +51,7 @@ struct ProductGridView: View {
 
 struct ProductCard: View {
     let product: Product
-    let onDoubleTap: () -> Void
+    let onEnlarge: ((Product) -> Void)?
     @EnvironmentObject var dataStore: DataStore
     @State private var scale: CGFloat = 1.0
     
@@ -68,14 +66,13 @@ struct ProductCard: View {
                         .frame(width: cardWidth, height: cardWidth * 0.9)
                         .clipped()
                 } else {
-                    // 默认占位图
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
-                                        Color(red: 0.95, green: 0.9, blue: 0.98),
-                                        Color(red: 0.9, green: 0.85, blue: 0.95)
+                                        dataStore.storeData.themeColor.toColor().opacity(0.15),
+                                        dataStore.storeData.themeColor.toColor().opacity(0.1)
                                     ]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -86,10 +83,10 @@ struct ProductCard: View {
                         VStack(spacing: 4) {
                             Image(systemName: "photo")
                                 .font(.system(size: 30))
-                                .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6).opacity(0.4))
+                                .foregroundColor(dataStore.storeData.themeColor.toColor().opacity(0.4))
                             Text("添加图片")
                                 .font(.system(size: 11))
-                                .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6).opacity(0.4))
+                                .foregroundColor(dataStore.storeData.themeColor.toColor().opacity(0.4))
                         }
                     }
                 }
@@ -97,21 +94,26 @@ struct ProductCard: View {
             .cornerRadius(8)
             .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
             .scaleEffect(scale)
-            .onTapGesture(count: 2) {
-                // 双击放大
-                onDoubleTap()
-            }
-            .onTapGesture(count: 1) {
-                // 单击效果（轻反馈）
-                withAnimation(.spring(response: 0.2)) {
-                    scale = 0.95
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.spring(response: 0.2)) {
-                        scale = 1.0
+            // 改用闭包回调
+            .gesture(
+                TapGesture(count: 2)
+                    .onEnded {
+                        onEnlarge?(product)
                     }
-                }
-            }
+            )
+            .highPriorityGesture(
+                TapGesture(count: 1)
+                    .onEnded {
+                        withAnimation(.spring(response: 0.2)) {
+                            scale = 0.95
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.spring(response: 0.2)) {
+                                scale = 1.0
+                            }
+                        }
+                    }
+            )
             
             // 商品名称
             Text(product.name)
@@ -132,7 +134,7 @@ struct ProductCard: View {
     }
     
     private var cardWidth: CGFloat {
-        let screenWidth = UIScreen.main.bounds.width - 24 // 12 padding on each side
+        let screenWidth = UIScreen.main.bounds.width - 24
         let spacing: CGFloat = 10 * CGFloat(columns - 1)
         return (screenWidth - spacing) / CGFloat(columns)
     }
@@ -146,7 +148,6 @@ struct ProductCard: View {
 
 struct GridLayoutEditView: View {
     @EnvironmentObject var dataStore: DataStore
-    @State private var selectedColumns: Int = 3
     
     var body: some View {
         Section(header: Text("商品布局").font(.headline)) {
@@ -158,17 +159,17 @@ struct GridLayoutEditView: View {
                 HStack(spacing: 12) {
                     ForEach(2...5, id: \.self) { num in
                         Button(action: {
-                            selectedColumns = num
+                            // 直接修改 store，不再使用本地 State
                             dataStore.storeData.gridColumns = num
                         }) {
                             Text("\(num)排")
-                                .font(.system(size: 16, weight: selectedColumns == num ? .bold : .regular))
-                                .foregroundColor(selectedColumns == num ? .white : Color(red: 0.4, green: 0.15, blue: 0.5))
+                                .font(.system(size: 16, weight: dataStore.storeData.gridColumns == num ? .bold : .regular))
+                                .foregroundColor(dataStore.storeData.gridColumns == num ? .white : dataStore.storeData.themeColor.toColor().opacity(0.7))
                                 .frame(width: 60, height: 40)
                                 .background(
-                                    selectedColumns == num ?
-                                        Color(red: 0.6, green: 0.2, blue: 0.6) :
-                                        Color(red: 0.95, green: 0.9, blue: 0.98)
+                                    dataStore.storeData.gridColumns == num ?
+                                        dataStore.storeData.themeColor.toColor() :
+                                        dataStore.storeData.themeColor.toColor().opacity(0.1)
                                 )
                                 .cornerRadius(10)
                         }
@@ -176,9 +177,6 @@ struct GridLayoutEditView: View {
                 }
             }
             .padding(.vertical, 4)
-            .onAppear {
-                selectedColumns = dataStore.storeData.gridColumns
-            }
         }
     }
 }

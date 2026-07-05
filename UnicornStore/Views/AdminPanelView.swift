@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 // MARK: - 管理后台面板
 
@@ -8,12 +9,18 @@ struct AdminPanelView: View {
     @State private var showPriceToggle = true
     @State private var showExportAlert = false
     @State private var exportMessage = ""
+    @State private var showShareSheet = false
+    @State private var shareFileURL: URL? = nil
+    
+    private var themeColor: Color {
+        dataStore.storeData.themeColor.toColor()
+    }
     
     var body: some View {
         NavigationView {
             List {
-                // 顶部横幅设置
-                TopBannerEditView()
+                // 商店名称设置
+                StoreNameEditView()
                 
                 // 公告栏设置
                 AnnouncementEditView()
@@ -26,7 +33,7 @@ struct AdminPanelView: View {
                     NavigationLink(destination: ProductListView()) {
                         HStack {
                             Image(systemName: "shippingbox.fill")
-                                .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
+                                .foregroundColor(themeColor)
                             VStack(alignment: .leading) {
                                 Text("管理商品列表")
                                     .font(.system(size: 15, weight: .medium))
@@ -58,7 +65,6 @@ struct AdminPanelView: View {
                 Section(header: Text("布局与显示").font(.headline)) {
                     GridLayoutEditView()
                     
-                    // 显示/隐藏价格
                     Toggle(isOn: $showPriceToggle) {
                         HStack {
                             Image(systemName: "yensign.circle.fill")
@@ -78,18 +84,14 @@ struct AdminPanelView: View {
                     .onAppear {
                         showPriceToggle = dataStore.storeData.showPrice
                     }
+                    
+                    // 整体主题色设置
+                    ThemeColorEditView()
                 }
                 
                 // 数据管理
                 Section(header: Text("数据管理").font(.headline)) {
-                    Button(action: {
-                        if let data = dataStore.exportData(),
-                           let jsonString = String(data: data, encoding: .utf8) {
-                            exportMessage = "数据已导出！可在控制台查看。\n数据大小: \(data.count) 字节"
-                            showExportAlert = true
-                            print("导出数据:\n\(jsonString)")
-                        }
-                    }) {
+                    Button(action: exportBackup) {
                         HStack {
                             Image(systemName: "square.and.arrow.up.fill")
                                 .foregroundColor(.blue)
@@ -100,7 +102,6 @@ struct AdminPanelView: View {
                     }
                     
                     Button(action: {
-                        // 重置为默认数据
                         dataStore.storeData = StoreData.defaultData()
                         exportMessage = "已重置为默认数据"
                         showExportAlert = true
@@ -121,7 +122,7 @@ struct AdminPanelView: View {
                 trailing: Button("完成") {
                     presentationMode.wrappedValue.dismiss()
                 }
-                .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
+                .foregroundColor(themeColor)
             )
             .alert(isPresented: $showExportAlert) {
                 Alert(
@@ -130,9 +131,166 @@ struct AdminPanelView: View {
                     dismissButton: .default(Text("确定"))
                 )
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = shareFileURL {
+                    ShareSheet(activityItems: [url])
+                }
+            }
         }
         .navigationViewStyle(StackNavigationViewStyle())
     }
+    
+    private func exportBackup() {
+        if let url = dataStore.getBackupFileURL() {
+            shareFileURL = url
+            exportMessage = "备份文件已生成，即将打开分享面板\n你可以通过 AirDrop、文件App 等方式保存"
+            showExportAlert = true
+            // 延迟弹出分享面板
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                showShareSheet = true
+            }
+        } else {
+            exportMessage = "导出失败，请重试"
+            showExportAlert = true
+        }
+    }
+}
+
+// MARK: - 商店名称编辑
+
+struct StoreNameEditView: View {
+    @EnvironmentObject var dataStore: DataStore
+    @State private var storeName: String = ""
+    @State private var fontSize: CGFloat = 24
+    @State private var textColor: String = "#9966CC"
+    
+    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#333333", "#000000"]
+    
+    var body: some View {
+        Section(header: Text("商店名称").font(.headline)) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("名称文字：")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                
+                TextField("输入商店名称", text: $storeName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .onAppear {
+                        storeName = dataStore.storeData.storeName
+                        fontSize = dataStore.storeData.storeNameFontSize
+                        textColor = dataStore.storeData.storeNameColor
+                    }
+                
+                // 字体大小
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("字体大小：\(Int(fontSize))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Slider(value: $fontSize, in: 16...40, step: 1)
+                }
+                
+                // 字体颜色
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("字体颜色：")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
+                        ForEach(presetColors, id: \.self) { color in
+                            Circle()
+                                .fill(color.toColor())
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Circle()
+                                        .stroke(textColor == color ? Color.primary : Color.clear, lineWidth: 3)
+                                )
+                                .onTapGesture {
+                                    textColor = color
+                                }
+                        }
+                    }
+                }
+                
+                // 预览
+                Text(storeName.isEmpty ? "预览" : storeName)
+                    .font(.system(size: fontSize, weight: .bold))
+                    .foregroundColor(textColor.toColor())
+                    .padding(.vertical, 4)
+            }
+            .padding(.vertical, 4)
+            
+            Button("保存名称设置") {
+                dataStore.storeData.storeName = storeName
+                dataStore.storeData.storeNameFontSize = fontSize
+                dataStore.storeData.storeNameColor = textColor
+            }
+            .font(.system(size: 15, weight: .medium))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(dataStore.storeData.themeColor.toColor())
+            .cornerRadius(10)
+        }
+    }
+}
+
+// MARK: - 主题色编辑
+
+struct ThemeColorEditView: View {
+    @EnvironmentObject var dataStore: DataStore
+    @State private var themeColor: String = "#9966CC"
+    
+    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12"]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("整体主题颜色：")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
+                ForEach(presetColors, id: \.self) { color in
+                    Circle()
+                        .fill(color.toColor())
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(themeColor == color ? Color.primary : Color.clear, lineWidth: 3)
+                        )
+                        .shadow(color: color.toColor().opacity(0.3), radius: themeColor == color ? 6 : 0)
+                        .onTapGesture {
+                            themeColor = color
+                            dataStore.storeData.themeColor = color
+                        }
+                }
+            }
+            .padding(.vertical, 4)
+            
+            Text("当前主题色预览")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(themeColor.toColor())
+                .cornerRadius(8)
+        }
+        .padding(.vertical, 4)
+        .onAppear {
+            themeColor = dataStore.storeData.themeColor
+        }
+    }
+}
+
+// MARK: - 分享面板（UIActivityViewController Bridge）
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - 商品列表视图
@@ -163,10 +321,12 @@ struct ProductListView: View {
                     ProductRowView(product: product)
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            // 先设置商品再弹出 sheet
                             editingProduct = product
-                            showEditSheet = true
+                            DispatchQueue.main.async {
+                                showEditSheet = true
+                            }
                         }
-                        // swipeActions requires iOS 15+, using onLongPress instead
                         .onLongPressGesture(minimumDuration: 0.5) {
                             deleteProduct = product
                             showDeleteAlert = true
@@ -177,6 +337,7 @@ struct ProductListView: View {
         .listStyle(InsetGroupedListStyle())
         .navigationTitle("商品列表 (\(dataStore.storeData.products.count))")
         .sheet(isPresented: $showEditSheet) {
+            // 确保 editingProduct 不为 nil
             if let product = editingProduct {
                 EditProductView(product: product)
                     .environmentObject(dataStore)

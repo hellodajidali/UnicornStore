@@ -6,36 +6,29 @@ struct AnnouncementView: View {
     @EnvironmentObject var dataStore: DataStore
     
     var body: some View {
-        let text = dataStore.storeData.announcement.text
+        let announcement = dataStore.storeData.announcement
+        let text = announcement.text
         let isEmpty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         
         if isEmpty {
-            // 无公告时显示很小的占位
             Color.clear.frame(height: 0)
         } else {
             HStack(spacing: 8) {
-                // 公告图标
-                Image(systemName: "megaphone.fill")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
-                    .frame(width: 20)
-                
-                // 滚动的公告文字
+                // 滚动的公告文字（已去掉小喇叭图标）
                 ScrollView(.horizontal, showsIndicators: false) {
                     Text(text)
-                        .font(.system(size: 14))
-                        .foregroundColor(Color(red: 0.4, green: 0.15, blue: 0.5))
+                        .font(.system(size: announcement.fontSize))
+                        .foregroundColor(announcement.textColor.toColor())
                         .lineLimit(nil)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                // scrollDisabled requires iOS 16+, skipped for iOS 14 compat
                 
                 Spacer()
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                Color(red: 0.95, green: 0.9, blue: 0.98)
+                dataStore.storeData.themeColor.toColor().opacity(0.1)
             )
             .cornerRadius(8)
         }
@@ -47,11 +40,16 @@ struct AnnouncementView: View {
 struct AnnouncementEditView: View {
     @EnvironmentObject var dataStore: DataStore
     @State private var announcementText: String = ""
+    @State private var fontSize: CGFloat = 14
+    @State private var textColor: String = "#663399"
+    @State private var showColorPicker = false
+    
+    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4"]
     
     var body: some View {
         Section(header: Text("公告栏").font(.headline)) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("公告内容（自动调整高度，无边框线）：")
+                Text("公告内容（自动调整高度）：")
                     .font(.subheadline)
                     .foregroundColor(.gray)
                 
@@ -62,18 +60,51 @@ struct AnnouncementEditView: View {
                     .cornerRadius(8)
                     .onAppear {
                         announcementText = dataStore.storeData.announcement.text
+                        fontSize = dataStore.storeData.announcement.fontSize
+                        textColor = dataStore.storeData.announcement.textColor
                     }
+                
+                // 字体大小
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("字体大小：\(Int(fontSize))")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    Slider(value: $fontSize, in: 10...28, step: 1)
+                }
+                
+                // 字体颜色
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("字体颜色：")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    HStack(spacing: 8) {
+                        ForEach(presetColors, id: \.self) { color in
+                            Circle()
+                                .fill(color.toColor())
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Circle()
+                                        .stroke(textColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                )
+                                .onTapGesture {
+                                    textColor = color
+                                }
+                        }
+                    }
+                }
             }
             .padding(.vertical, 4)
             
             Button("保存公告") {
                 dataStore.storeData.announcement.text = announcementText
+                dataStore.storeData.announcement.fontSize = fontSize
+                dataStore.storeData.announcement.textColor = textColor
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(Color(red: 0.6, green: 0.2, blue: 0.6))
+            .background(dataStore.storeData.themeColor.toColor())
             .cornerRadius(10)
         }
     }

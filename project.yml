@@ -1,4 +1,4 @@
-name: UnicornStore
+name: 雾化胖东来
 options:
   bundleIdPrefix: com.unicornstore
   deploymentTarget:
@@ -9,15 +9,15 @@ settings:
   base:
     TARGETED_DEVICE_FAMILY: "2"
     IPHONEOS_DEPLOYMENT_TARGET: "14.0"
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "2.0.0"
+    CURRENT_PROJECT_VERSION: "2"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Manual
     CODE_SIGN_IDENTITY: "Apple Development"
     PROVISIONING_PROFILE_SPECIFIER: ""
 
 targets:
-  UnicornStore:
+  雾化胖东来:
     type: application
     platform: iOS
     sources:

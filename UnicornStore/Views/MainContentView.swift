@@ -7,10 +7,13 @@ struct MainContentView: View {
     @State private var selectedCategoryId: UUID?
     @State private var showAdmin = false
     @State private var enlargedProduct: Product? = nil
-    @State private var showImageDetail = false
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
+    }
+    
+    private var themeColor: Color {
+        dataStore.storeData.themeColor.toColor()
     }
     
     private var filteredProducts: [Product] {
@@ -28,23 +31,22 @@ struct MainContentView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 12) {
-                        // 1. 顶部横幅
-                        TopBannerView()
-                            .padding(.horizontal, 12)
-                            .padding(.top, 8)
-                        
-                        // 2. 公告栏
+                        // 1. 公告栏
                         AnnouncementView()
                             .padding(.horizontal, 12)
                         
-                        // 3. 分类栏
+                        // 2. 分类栏
                         CategoryRowView(selectedId: $selectedCategoryId)
                             .padding(.horizontal, 12)
                         
-                        // 4. 商品网格
+                        // 3. 商品网格
                         ProductGridView(
                             products: filteredProducts,
-                            enlargedProduct: $enlargedProduct
+                            onEnlarge: { product in
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    enlargedProduct = product
+                                }
+                            }
                         )
                         .padding(.horizontal, 12)
                         .padding(.bottom, 20)
@@ -74,9 +76,9 @@ struct MainContentView: View {
     // MARK: - 顶部工具栏
     private var topToolbar: some View {
         HStack {
-            Text("独角商店")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(Color(red: 0.6, green: 0.2, blue: 0.6))
+            Text(dataStore.storeData.storeName)
+                .font(.system(size: dataStore.storeData.storeNameFontSize, weight: .bold))
+                .foregroundColor(dataStore.storeData.storeNameColor.toColor())
             
             Spacer()
             
@@ -92,7 +94,7 @@ struct MainContentView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Color(red: 0.6, green: 0.2, blue: 0.6))
+                .background(themeColor)
                 .cornerRadius(20)
             }
         }
@@ -118,10 +120,7 @@ struct ImageDetailOverlay: View {
                 Color.black.opacity(0.9)
                     .ignoresSafeArea()
                     .onTapGesture(count: 2) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            isShowing = false
-                            scale = 1.0
-                        }
+                        handleDoubleTap()
                     }
                 
                 VStack(spacing: 12) {
@@ -142,20 +141,11 @@ struct ImageDetailOverlay: View {
                                     }
                             )
                             .onTapGesture(count: 2) {
-                                withAnimation(.spring()) {
-                                    if scale > 1.0 {
-                                        scale = 1.0
-                                        lastScale = 1.0
-                                    } else {
-                                        scale = 2.5
-                                        lastScale = 2.5
-                                    }
-                                }
+                                handleDoubleTap()
                             }
                             .frame(maxWidth: UIScreen.main.bounds.width - 40)
                             .frame(maxHeight: UIScreen.main.bounds.height * 0.6)
                     } else {
-                        // 无图片时的占位
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(Color.gray.opacity(0.3))
@@ -186,8 +176,8 @@ struct ImageDetailOverlay: View {
                         }
                     }
                     
-                    // 关闭提示
-                    Text("双击图片关闭")
+                    // 操作提示
+                    Text(scale > 1.0 ? "双击图片缩小" : "双击图片关闭")
                         .font(.system(size: 12))
                         .foregroundColor(.gray.opacity(0.6))
                         .padding(.top, 8)
@@ -196,5 +186,20 @@ struct ImageDetailOverlay: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: isShowing)
+    }
+    
+    private func handleDoubleTap() {
+        withAnimation(.spring()) {
+            if scale > 1.0 {
+                // 已放大 → 缩小回默认
+                scale = 1.0
+                lastScale = 1.0
+            } else {
+                // 默认大小 → 关闭
+                isShowing = false
+                scale = 1.0
+                lastScale = 1.0
+            }
+        }
     }
 }
