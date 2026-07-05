@@ -45,7 +45,7 @@ struct MainContentView: View {
                         ProductGridView(
                             products: filteredProducts,
                             onEnlarge: { product in
-                                withAnimation(.easeInOut(duration: 0.3)) {
+                                withAnimation(.easeInOut(duration: 0.15)) {
                                     enlargedProduct = product
                                 }
                             }
@@ -203,7 +203,7 @@ struct ImageDetailOverlay: View {
                         VStack(spacing: 6) {
                             Text(p.name)
                                 .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.white)
+                                .foregroundColor(.black)
                             
                             if DataStore.shared.storeData.showPrice {
                                 Text(p.price)
@@ -230,7 +230,7 @@ struct ImageDetailOverlay: View {
             }
         }
         // 不用 .animation() 修饰符，由 dismiss() 内部 withAnimation 控制动画时长
-        // 打开 0.3s（来自 MainContentView 的 onEnlarge）, 关闭 0.15s（来自 dismiss()）
+        // 打开 & 关闭均为 0.15s，干脆利落不拖沓
         .allowsHitTesting(isShowing)
         .onChange(of: isShowing) { newValue in
             if newValue {
