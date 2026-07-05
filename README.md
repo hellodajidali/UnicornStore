@@ -1,4 +1,4 @@
-# 🌫️ 雾化胖东来 - iOS App
+# 🌫️ UnicornStore - iOS App
 
 iPad mini 5 离线商品展示App（iOS 14.8.1 / 巨魔TrollStore）
 
