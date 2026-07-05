@@ -28,6 +28,8 @@ struct CategoryRowView: View {
             }
             .padding(.vertical, 4)
         }
+        .frame(height: 48)
+        .contentShape(Rectangle())
     }
 }
 
