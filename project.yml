@@ -1,0 +1,33 @@
+name: UnicornStore
+options:
+  bundleIdPrefix: com.unicornstore
+  deploymentTarget:
+    iOS: "14.0"
+  xcodeVersion: "14.0"
+
+settings:
+  base:
+    TARGETED_DEVICE_FAMILY: "2"
+    IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Apple Development"
+    PROVISIONING_PROFILE_SPECIFIER: ""
+
+targets:
+  UnicornStore:
+    type: application
+    platform: iOS
+    sources:
+      - path: UnicornStore
+    settings:
+      base:
+        INFOPLIST_FILE: UnicornStore/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.unicornstore.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "2"
+    info:
+      path: UnicornStore/Info.plist
+    dependencies: []

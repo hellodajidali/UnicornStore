@@ -1,0 +1,14 @@
+# Xcode
+*.xcworkspace
+*.xcuserdata
+DerivedData/
+Build/
+build/
+
+# macOS
+.DS_Store
+*.swp
+*.lock
+
+# 忽略生成的 xcodeproj（XcodeGen 会重新生成）
+# UnicornStore.xcodeproj
