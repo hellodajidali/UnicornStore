@@ -95,39 +95,28 @@ struct AnnouncementEditView: View {
                     }
                 }
                 
-                // 背景颜色切换（灰/白）
+                // 背景颜色切换（和字体颜色相同色板 + 白色+灰色）
                 VStack(alignment: .leading, spacing: 6) {
                     Text("背景颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    HStack(spacing: 12) {
-                        Button(action: { announcementBgColor = "#F0F0F0" }) {
-                            HStack {
-                                Image(systemName: announcementBgColor == "#F0F0F0" ? "circle.fill" : "circle")
-                                    .foregroundColor(Color(white: 0.8))
-                                Text("浅灰")
-                                    .font(.system(size: 14))
-                            }
-                            .foregroundColor(.primary)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
+                        ForEach(presetColors + ["#FFFFFF", "#F0F0F0"], id: \.self) { color in
+                            Circle()
+                                .fill(color.toColor())
+                                .frame(width: 32, height: 32)
+                                .overlay(
+                                    Circle()
+                                        .stroke(announcementBgColor == color ? Color.primary : Color.clear, lineWidth: 3)
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(color == "#FFFFFF" ? Color.gray.opacity(0.3) : Color.clear, lineWidth: 1)
+                                )
+                                .onTapGesture {
+                                    announcementBgColor = color
+                                }
                         }
-                        .buttonStyle(BorderlessButtonStyle())
-                        
-                        Button(action: { announcementBgColor = "#FFFFFF" }) {
-                            HStack {
-                                Image(systemName: announcementBgColor == "#FFFFFF" ? "circle.fill" : "circle")
-                                    .foregroundColor(Color(white: 0.9))
-                                Text("白色")
-                                    .font(.system(size: 14))
-                            }
-                            .foregroundColor(.primary)
-                        }
-                        .buttonStyle(BorderlessButtonStyle())
-                        
-                        // 预览色块
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(announcementBgColor.toColor())
-                            .frame(width: 28, height: 20)
-                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.3)))
                     }
                 }
             }
