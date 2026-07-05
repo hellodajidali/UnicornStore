@@ -86,6 +86,10 @@ struct MainContentView: View {
             Text(dataStore.storeData.storeName)
                 .font(.system(size: dataStore.storeData.storeNameFontSize, weight: .bold))
                 .foregroundColor(dataStore.storeData.storeNameColor.toColor())
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(dataStore.storeData.storeNameBgColor.toColor())
+                .cornerRadius(6)
             
             Spacer()
             

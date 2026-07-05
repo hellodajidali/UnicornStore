@@ -199,6 +199,7 @@ struct StoreNameEditView: View {
     @State private var storeName: String = ""
     @State private var fontSize: CGFloat = 24
     @State private var textColor: String = "#9966CC"
+    @State private var nameBgColor: String = "#FFFFFF"
     
     private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#333333", "#000000"]
     
@@ -215,6 +216,7 @@ struct StoreNameEditView: View {
                         storeName = dataStore.storeData.storeName
                         fontSize = dataStore.storeData.storeNameFontSize
                         textColor = dataStore.storeData.storeNameColor
+                        nameBgColor = dataStore.storeData.storeNameBgColor
                     }
                 
                 // 字体大小
@@ -246,6 +248,42 @@ struct StoreNameEditView: View {
                     }
                 }
                 
+                // 背景颜色切换（灰/白）
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("名称背景颜色：")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    HStack(spacing: 12) {
+                        Button(action: { nameBgColor = "#FFFFFF" }) {
+                            HStack {
+                                Image(systemName: nameBgColor == "#FFFFFF" ? "circle.fill" : "circle")
+                                    .foregroundColor(Color(white: 0.9))
+                                Text("白色（无背景）")
+                                    .font(.system(size: 14))
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        
+                        Button(action: { nameBgColor = "#F0F0F0" }) {
+                            HStack {
+                                Image(systemName: nameBgColor == "#F0F0F0" ? "circle.fill" : "circle")
+                                    .foregroundColor(Color(white: 0.8))
+                                Text("浅灰")
+                                    .font(.system(size: 14))
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        
+                        // 预览色块
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(nameBgColor.toColor())
+                            .frame(width: 28, height: 20)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.3)))
+                    }
+                }
+                
                 // 预览
                 Text(storeName.isEmpty ? "预览" : storeName)
                     .font(.system(size: fontSize, weight: .bold))
@@ -258,6 +296,7 @@ struct StoreNameEditView: View {
                 dataStore.storeData.storeName = storeName
                 dataStore.storeData.storeNameFontSize = fontSize
                 dataStore.storeData.storeNameColor = textColor
+                dataStore.storeData.storeNameBgColor = nameBgColor
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(.white)

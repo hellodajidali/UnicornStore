@@ -26,6 +26,10 @@ struct StoreData: Codable {
     // 整体主题色
     var themeColor: String  // hex颜色
     
+    // 背景颜色（独立于主题色）
+    var announcementBgColor: String  // hex颜色，默认浅灰
+    var storeNameBgColor: String     // hex颜色，默认白色
+    
     static func defaultData() -> StoreData {
         let allCategory = Category(id: UUID(), name: "全部")
         let cat1 = Category(id: UUID(), name: "热门推荐")
@@ -44,8 +48,64 @@ struct StoreData: Codable {
             ],
             gridColumns: 3,
             showPrice: true,
-            themeColor: "#9966CC"
+            themeColor: "#9966CC",
+            announcementBgColor: "#F0F0F0",
+            storeNameBgColor: "#FFFFFF"
         )
+    }
+    
+    // 自定义 Codable 兼容旧数据（新加的字段如果没有就使用默认值）
+    enum CodingKeys: String, CodingKey {
+        case storeName, storeNameFontSize, storeNameColor, announcement
+        case categories, products, gridColumns, showPrice, themeColor
+        case announcementBgColor, storeNameBgColor
+    }
+    
+    init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
+         announcement: Announcement, categories: [Category], products: [Product],
+         gridColumns: Int, showPrice: Bool, themeColor: String,
+         announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF") {
+        self.storeName = storeName
+        self.storeNameFontSize = storeNameFontSize
+        self.storeNameColor = storeNameColor
+        self.announcement = announcement
+        self.categories = categories
+        self.products = products
+        self.gridColumns = gridColumns
+        self.showPrice = showPrice
+        self.themeColor = themeColor
+        self.announcementBgColor = announcementBgColor
+        self.storeNameBgColor = storeNameBgColor
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        storeName = try c.decode(String.self, forKey: .storeName)
+        storeNameFontSize = try c.decode(CGFloat.self, forKey: .storeNameFontSize)
+        storeNameColor = try c.decode(String.self, forKey: .storeNameColor)
+        announcement = try c.decode(Announcement.self, forKey: .announcement)
+        categories = try c.decode([Category].self, forKey: .categories)
+        products = try c.decode([Product].self, forKey: .products)
+        gridColumns = try c.decode(Int.self, forKey: .gridColumns)
+        showPrice = try c.decode(Bool.self, forKey: .showPrice)
+        themeColor = try c.decode(String.self, forKey: .themeColor)
+        announcementBgColor = try c.decodeIfPresent(String.self, forKey: .announcementBgColor) ?? "#F0F0F0"
+        storeNameBgColor = try c.decodeIfPresent(String.self, forKey: .storeNameBgColor) ?? "#FFFFFF"
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(storeName, forKey: .storeName)
+        try c.encode(storeNameFontSize, forKey: .storeNameFontSize)
+        try c.encode(storeNameColor, forKey: .storeNameColor)
+        try c.encode(announcement, forKey: .announcement)
+        try c.encode(categories, forKey: .categories)
+        try c.encode(products, forKey: .products)
+        try c.encode(gridColumns, forKey: .gridColumns)
+        try c.encode(showPrice, forKey: .showPrice)
+        try c.encode(themeColor, forKey: .themeColor)
+        try c.encode(announcementBgColor, forKey: .announcementBgColor)
+        try c.encode(storeNameBgColor, forKey: .storeNameBgColor)
     }
 }
 

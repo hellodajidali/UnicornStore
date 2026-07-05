@@ -28,7 +28,7 @@ struct AnnouncementView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                dataStore.storeData.themeColor.toColor().opacity(0.1)
+                dataStore.storeData.announcementBgColor.toColor()
             )
             .cornerRadius(8)
         }
@@ -43,6 +43,7 @@ struct AnnouncementEditView: View {
     @State private var fontSize: CGFloat = 14
     @State private var textColor: String = "#663399"
     @State private var showColorPicker = false
+    @State private var announcementBgColor: String = "#F0F0F0"
     
     private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
     
@@ -62,6 +63,7 @@ struct AnnouncementEditView: View {
                         announcementText = dataStore.storeData.announcement.text
                         fontSize = dataStore.storeData.announcement.fontSize
                         textColor = dataStore.storeData.announcement.textColor
+                        announcementBgColor = dataStore.storeData.announcementBgColor
                     }
                 
                 // 字体大小
@@ -92,6 +94,42 @@ struct AnnouncementEditView: View {
                         }
                     }
                 }
+                
+                // 背景颜色切换（灰/白）
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("背景颜色：")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    HStack(spacing: 12) {
+                        Button(action: { announcementBgColor = "#F0F0F0" }) {
+                            HStack {
+                                Image(systemName: announcementBgColor == "#F0F0F0" ? "circle.fill" : "circle")
+                                    .foregroundColor(Color(white: 0.8))
+                                Text("浅灰")
+                                    .font(.system(size: 14))
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        
+                        Button(action: { announcementBgColor = "#FFFFFF" }) {
+                            HStack {
+                                Image(systemName: announcementBgColor == "#FFFFFF" ? "circle.fill" : "circle")
+                                    .foregroundColor(Color(white: 0.9))
+                                Text("白色")
+                                    .font(.system(size: 14))
+                            }
+                            .foregroundColor(.primary)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        
+                        // 预览色块
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(announcementBgColor.toColor())
+                            .frame(width: 28, height: 20)
+                            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.gray.opacity(0.3)))
+                    }
+                }
             }
             .padding(.vertical, 4)
             
@@ -99,6 +137,7 @@ struct AnnouncementEditView: View {
                 dataStore.storeData.announcement.text = announcementText
                 dataStore.storeData.announcement.fontSize = fontSize
                 dataStore.storeData.announcement.textColor = textColor
+                dataStore.storeData.announcementBgColor = announcementBgColor
             }
             .font(.system(size: 15, weight: .medium))
             .foregroundColor(.white)
