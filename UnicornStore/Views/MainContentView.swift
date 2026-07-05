@@ -139,7 +139,7 @@ struct ImageDetailOverlay: View {
             // 始终渲染 ZStack，用 opacity 控制显隐，避免条件渲染导致的闪现问题
             if isShowing || retainedProduct != nil {
                 // 半透明背景（单点关闭）
-                Color.black.opacity(isShowing ? 0.9 : 0)
+                Color(white: 0.12).opacity(isShowing ? 0.92 : 0)
                     .ignoresSafeArea()
                     .onTapGesture(perform: dismiss)
                 
