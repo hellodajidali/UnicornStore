@@ -124,6 +124,18 @@ struct MainContentView: View {
     }
 }
 
+// MARK: - 毛玻璃背景（iOS 14+ 兼容）
+
+struct BlurView: UIViewRepresentable {
+    let style: UIBlurEffect.Style
+    
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: style))
+    }
+    
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
+}
+
 // MARK: - 图片放大覆盖层
 
 struct ImageDetailOverlay: View {
@@ -138,9 +150,10 @@ struct ImageDetailOverlay: View {
         ZStack {
             // 始终渲染 ZStack，用 opacity 控制显隐，避免条件渲染导致的闪现问题
             if isShowing || retainedProduct != nil {
-                // 半透明背景（单点关闭）
-                Color(white: 0.12).opacity(isShowing ? 0.92 : 0)
+                // 毛玻璃背景（单点关闭），关闭时像雾气散开无暗闪
+                BlurView(style: .systemUltraThinMaterial)
                     .ignoresSafeArea()
+                    .opacity(isShowing ? 1 : 0)
                     .onTapGesture(perform: dismiss)
                 
                 VStack(spacing: 12) {
@@ -216,15 +229,16 @@ struct ImageDetailOverlay: View {
                 .opacity(isShowing ? 1 : 0)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: isShowing)
+        // 不用 .animation() 修饰符，由 dismiss() 内部 withAnimation 控制动画时长
+        // 打开 0.3s（来自 MainContentView 的 onEnlarge）, 关闭 0.15s（来自 dismiss()）
         .allowsHitTesting(isShowing)
         .onChange(of: isShowing) { newValue in
             if newValue {
                 // 打开时：保留当前商品数据
                 retainedProduct = product
             } else {
-                // 关闭时：等动画彻底结束后再释放数据
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                // 关闭时：等 0.15s 动画彻底结束后再释放数据
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     if !isShowing {
                         retainedProduct = nil
                     }
@@ -239,7 +253,8 @@ struct ImageDetailOverlay: View {
     }
     
     private func dismiss() {
-        withAnimation(.easeInOut(duration: 0.3)) {
+        // 关闭动画 0.15s，比打开快一倍，来不及感觉"画面一黑"
+        withAnimation(.easeInOut(duration: 0.15)) {
             isShowing = false
             scale = 1.0
             lastScale = 1.0
