@@ -14,6 +14,7 @@ struct AdminPanelView: View {
     @State private var showFileImporter = false
     @State private var showImportAlert = false
     @State private var importMessage = ""
+    @State private var documentPickerHandler = DocumentPickerHandler()
     
     private var themeColor: Color {
         dataStore.storeData.themeColor.toColor()
@@ -105,6 +106,27 @@ struct AdminPanelView: View {
                     }
                     
                     Button(action: {
+                        documentPickerHandler = DocumentPickerHandler()
+                        documentPickerHandler.onPick = { url in
+                            // 读取文件并导入数据
+                            let didAccess = url.startAccessingSecurityScopedResource()
+                            defer {
+                                if didAccess {
+                                    url.stopAccessingSecurityScopedResource()
+                                }
+                            }
+                            do {
+                                let data = try Data(contentsOf: url)
+                                if dataStore.importData(data) {
+                                    importMessage = "数据导入成功！"
+                                } else {
+                                    importMessage = "导入失败：数据格式不正确"
+                                }
+                            } catch {
+                                importMessage = "导入失败：\(error.localizedDescription)"
+                            }
+                            showImportAlert = true
+                        }
                         showFileImporter = true
                     }) {
                         HStack {
@@ -158,38 +180,8 @@ struct AdminPanelView: View {
                     ShareSheet(activityItems: [url])
                 }
             }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.json]) { result in
-                switch result {
-                case .success(let url):
-                    // 安全作用域 URL 必须先申请访问权限
-                    let didAccess = url.startAccessingSecurityScopedResource()
-                    defer {
-                        if didAccess {
-                            url.stopAccessingSecurityScopedResource()
-                        }
-                    }
-                    do {
-                        let data = try Data(contentsOf: url)
-                        DispatchQueue.main.async {
-                            if dataStore.importData(data) {
-                                importMessage = "数据导入成功！"
-                            } else {
-                                importMessage = "导入失败：数据格式不正确"
-                            }
-                            showImportAlert = true
-                        }
-                    } catch {
-                        DispatchQueue.main.async {
-                            importMessage = "导入失败：\(error.localizedDescription)"
-                            showImportAlert = true
-                        }
-                    }
-                case .failure(let error):
-                    DispatchQueue.main.async {
-                        importMessage = "选择文件失败：\(error.localizedDescription)"
-                        showImportAlert = true
-                    }
-                }
+            .sheet(isPresented: $showFileImporter) {
+                DocumentPickerView(handler: documentPickerHandler)
             }
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -630,4 +622,26 @@ struct SwipeToDeleteRow<Content: View>: View {
         }
         .clipped()
     }
+}
+
+// MARK: - 文件选择器（UIViewControllerRepresentable 包装，比 .fileImporter 更稳定）
+class DocumentPickerHandler: NSObject, UIDocumentPickerDelegate {
+    var onPick: ((URL) -> Void)?
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let url = urls.first else { return }
+        onPick?(url)
+    }
+}
+
+struct DocumentPickerView: UIViewControllerRepresentable {
+    let handler: DocumentPickerHandler
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json], asCopy: true)
+        picker.delegate = handler
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
 }
