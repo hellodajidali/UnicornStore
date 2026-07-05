@@ -127,17 +127,18 @@ struct CategoryEditView: View {
             }
         }
         .alert(isPresented: $showEditAlert) {
-            Text("编辑分类名称")
-        } message: {
-            Text("请输入新的分类名称")
-        }
-        .onChange(of: showEditAlert) { showing in
-            if !showing, let cat = editingCategory {
-                let trimmed = editName.trimmingCharacters(in: .whitespaces)
-                if !trimmed.isEmpty {
-                    dataStore.renameCategory(cat, newName: trimmed)
+            Alert(
+                title: Text("编辑分类名称"),
+                message: Text("请输入新的分类名称"),
+                dismissButton: .default(Text("确定")) {
+                    if let cat = editingCategory {
+                        let trimmed = editName.trimmingCharacters(in: .whitespaces)
+                        if !trimmed.isEmpty {
+                            dataStore.renameCategory(cat, newName: trimmed)
+                        }
+                    }
                 }
-            }
+            )
         }
     }
 }
