@@ -17,10 +17,11 @@ struct MainContentView: View {
     }
     
     private var filteredProducts: [Product] {
+        let activeProducts = dataStore.storeData.products.filter { $0.isActive }
         if selectedCategoryId == nil || selectedCategoryId == allCategoryId {
-            return dataStore.storeData.products
+            return activeProducts
         }
-        return dataStore.storeData.products.filter { $0.categoryId == selectedCategoryId }
+        return activeProducts.filter { $0.categoryId == selectedCategoryId }
     }
     
     var body: some View {

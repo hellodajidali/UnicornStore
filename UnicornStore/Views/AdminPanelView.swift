@@ -512,6 +512,10 @@ struct ProductListView: View {
 struct ProductRowView: View {
     let product: Product
     
+    private var themeColor: Color {
+        DataStore.shared.storeData.themeColor.toColor()
+    }
+    
     var body: some View {
         HStack(spacing: 12) {
             // 缩略图
@@ -521,6 +525,7 @@ struct ProductRowView: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 60, height: 60)
                     .cornerRadius(8)
+                    .opacity(product.isActive ? 1 : 0.4)
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
@@ -528,29 +533,58 @@ struct ProductRowView: View {
                         .frame(width: 60, height: 60)
                     Image(systemName: "photo")
                         .foregroundColor(.gray)
+                        .opacity(product.isActive ? 1 : 0.4)
                 }
             }
             
             // 商品信息
             VStack(alignment: .leading, spacing: 4) {
-                Text(product.name)
-                    .font(.system(size: 15, weight: .medium))
+                HStack(spacing: 6) {
+                    Text(product.name)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(product.isActive ? .primary : .gray)
+                    
+                    if !product.isActive {
+                        Text("已隐藏")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.gray)
+                            .cornerRadius(4)
+                    }
+                }
                 
                 if DataStore.shared.storeData.showPrice {
                     Text(product.price)
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.orange)
+                        .foregroundColor(product.isActive ? .orange : .gray)
                 }
                 
                 if !product.description.isEmpty {
                     Text(product.description)
                         .font(.system(size: 12))
-                        .foregroundColor(.gray)
+                        .foregroundColor(product.isActive ? .gray : .gray.opacity(0.5))
                         .lineLimit(1)
                 }
             }
             
             Spacer()
+            
+            // 上架/下架开关
+            Toggle(isOn: Binding(
+                get: { product.isActive },
+                set: { newValue in
+                    if let idx = DataStore.shared.storeData.products.firstIndex(where: { $0.id == product.id }) {
+                        DataStore.shared.storeData.products[idx].isActive = newValue
+                        DataStore.shared.saveData()
+                    }
+                }
+            )) { }
+            .labelsHidden()
+            .toggleStyle(SwitchToggleStyle(tint: themeColor))
+            .scaleEffect(0.8)
+            .fixedSize()
             
             Image(systemName: "chevron.right")
                 .font(.system(size: 12))

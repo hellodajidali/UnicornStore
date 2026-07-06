@@ -146,6 +146,7 @@ struct Product: Codable, Identifiable, Equatable {
     var categoryId: UUID?
     var imageData: Data?
     var description: String
+    var isActive: Bool  // true=上架展示, false=下架隐藏
     
     var image: UIImage? {
         if let data = imageData {
@@ -154,17 +155,45 @@ struct Product: Codable, Identifiable, Equatable {
         return nil
     }
     
-    init(id: UUID = UUID(), name: String, price: String, categoryId: UUID? = nil, imageData: Data? = nil, description: String = "") {
+    init(id: UUID = UUID(), name: String, price: String, categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true) {
         self.id = id
         self.name = name
         self.price = price
         self.categoryId = categoryId
         self.imageData = imageData
         self.description = description
+        self.isActive = isActive
     }
     
     static func == (lhs: Product, rhs: Product) -> Bool {
         lhs.id == rhs.id
+    }
+    
+    // 自定义 Codable 兼容旧数据（isActive 字段不存在时默认为 true）
+    enum CodingKeys: String, CodingKey {
+        case id, name, price, categoryId, imageData, description, isActive
+    }
+    
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        price = try c.decode(String.self, forKey: .price)
+        categoryId = try c.decodeIfPresent(UUID.self, forKey: .categoryId)
+        imageData = try c.decodeIfPresent(Data.self, forKey: .imageData)
+        description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
+        isActive = try c.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(price, forKey: .price)
+        try c.encodeIfPresent(categoryId, forKey: .categoryId)
+        try c.encodeIfPresent(imageData, forKey: .imageData)
+        try c.encode(description, forKey: .description)
+        try c.encode(isActive, forKey: .isActive)
     }
 }
 
