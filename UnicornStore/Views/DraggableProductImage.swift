@@ -11,6 +11,8 @@ struct DraggableProductImage: View {
     @Binding var offsetY: CGFloat
     let draggable: Bool  // true=可拖动, false=只读展示
     
+    @State private var lastDragLocation: CGPoint? = nil
+    
     init(image: UIImage, frameWidth: CGFloat, frameHeight: CGFloat,
          offsetX: Binding<CGFloat>, offsetY: Binding<CGFloat>,
          draggable: Bool = true) {
@@ -37,15 +39,7 @@ struct DraggableProductImage: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: scaledW, height: scaledH)
                     .offset(x: offsetX * maxOX, y: offsetY * maxOY)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                let dx = maxOX > 0 ? value.translation.width / maxOX : 0
-                                let dy = maxOY > 0 ? value.translation.height / maxOY : 0
-                                offsetX = max(-1, min(1, offsetX + dx))
-                                offsetY = max(-1, min(1, offsetY + dy))
-                            }
-                    )
+                    .gesture(dragGesture(maxOX: maxOX, maxOY: maxOY))
                     .clipped()
                     .frame(width: frameWidth, height: frameHeight)
             } else {
@@ -60,5 +54,24 @@ struct DraggableProductImage: View {
         }
         .frame(width: frameWidth, height: frameHeight)
         .cornerRadius(8)
+    }
+    
+    private func dragGesture(maxOX: CGFloat, maxOY: CGFloat) -> some Gesture {
+        DragGesture()
+            .onChanged { value in
+                let location = value.location
+                if let last = lastDragLocation {
+                    // 逐帧差值，避免 cumulative translation 导致的跳变
+                    let deltaX = maxOX > 0 ? (location.x - last.x) / maxOX : 0
+                    let deltaY = maxOY > 0 ? (location.y - last.y) / maxOY : 0
+                    // 0.5 速度衰减，拖动手感更柔和
+                    offsetX = max(-1, min(1, offsetX + deltaX * 0.5))
+                    offsetY = max(-1, min(1, offsetY + deltaY * 0.5))
+                }
+                lastDragLocation = location
+            }
+            .onEnded { _ in
+                lastDragLocation = nil
+            }
     }
 }

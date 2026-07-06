@@ -639,7 +639,8 @@ struct SwipeToDeleteRow<Content: View>: View {
                             .font(.system(size: 12))
                     }
                     .foregroundColor(.white)
-                    .frame(width: deleteButtonWidth, height: 80)
+                    .frame(width: deleteButtonWidth)
+                    .frame(maxHeight: .infinity)
                     .background(Color.red)
                 }
                 .buttonStyle(BorderlessButtonStyle())
