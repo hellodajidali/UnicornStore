@@ -516,7 +516,7 @@ struct ProductRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             // 缩略图 + 商品信息（可点击跳转编辑）
             HStack(spacing: 12) {
                 // 缩略图
@@ -575,13 +575,23 @@ struct ProductRowView: View {
             
             Spacer()
             
+            // 编辑按钮
+            Button(action: onTap) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 15))
+                    .foregroundColor(themeColor)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(BorderlessButtonStyle())
+            
             // 上架/下架开关（可独立点击，不会触发编辑）
             Toggle(isOn: Binding(
                 get: { product.isActive },
                 set: { newValue in
                     if let idx = DataStore.shared.storeData.products.firstIndex(where: { $0.id == product.id }) {
-                        DataStore.shared.storeData.products[idx].isActive = newValue
-                        DataStore.shared.saveToDisk()
+                        var updated = DataStore.shared.storeData
+                        updated.products[idx].isActive = newValue
+                        DataStore.shared.storeData = updated
                     }
                 }
             )) { }
@@ -606,6 +616,7 @@ struct SwipeToDeleteRow<Content: View>: View {
     
     @State private var offsetX: CGFloat = 0
     @State private var showDelete = false
+    @Environment(\.editMode) var editMode
     private let deleteButtonWidth: CGFloat = 80
     
     init(@ViewBuilder content: () -> Content, onDelete: @escaping () -> Void) {
@@ -635,28 +646,35 @@ struct SwipeToDeleteRow<Content: View>: View {
             }
             
             // 主要内容
-            content
-                .background(Color(.systemBackground))
-                .offset(x: offsetX)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            if value.translation.width < 0 {
-                                offsetX = max(-deleteButtonWidth, value.translation.width)
-                            }
-                        }
-                        .onEnded { value in
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                if value.translation.width < -deleteButtonWidth * 0.4 {
-                                    offsetX = -deleteButtonWidth
-                                    showDelete = true
-                                } else {
-                                    offsetX = 0
-                                    showDelete = false
+            if editMode?.wrappedValue == .active {
+                // 排序模式下：禁用滑动删除手势，避免与 .onMove 拖拽冲突
+                content
+                    .background(Color(.systemBackground))
+                    .offset(x: offsetX)
+            } else {
+                content
+                    .background(Color(.systemBackground))
+                    .offset(x: offsetX)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                if value.translation.width < 0 {
+                                    offsetX = max(-deleteButtonWidth, value.translation.width)
                                 }
                             }
-                        }
-                )
+                            .onEnded { value in
+                                withAnimation(.easeOut(duration: 0.2)) {
+                                    if value.translation.width < -deleteButtonWidth * 0.4 {
+                                        offsetX = -deleteButtonWidth
+                                        showDelete = true
+                                    } else {
+                                        offsetX = 0
+                                        showDelete = false
+                                    }
+                                }
+                            }
+                    )
+            }
         }
         .clipped()
     }
