@@ -60,11 +60,14 @@ struct ProductCard: View {
             // 商品图片
             ZStack {
                 if let image = product.image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: cardWidth, height: cardWidth * 0.9)
-                        .clipped()
+                    DraggableProductImage(
+                        image: image,
+                        frameWidth: cardWidth,
+                        frameHeight: cardWidth * 0.9,
+                        offsetX: .constant(product.imageOffsetX),
+                        offsetY: .constant(product.imageOffsetY),
+                        draggable: false
+                    )
                 } else {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)

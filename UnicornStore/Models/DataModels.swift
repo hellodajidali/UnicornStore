@@ -147,6 +147,8 @@ struct Product: Codable, Identifiable, Equatable {
     var imageData: Data?
     var description: String
     var isActive: Bool  // true=上架展示, false=下架隐藏
+    var imageOffsetX: CGFloat  // 图片水平偏移（归一化 -1~1）
+    var imageOffsetY: CGFloat  // 图片垂直偏移（归一化 -1~1）
     
     var image: UIImage? {
         if let data = imageData {
@@ -155,7 +157,7 @@ struct Product: Codable, Identifiable, Equatable {
         return nil
     }
     
-    init(id: UUID = UUID(), name: String, price: String, categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true) {
+    init(id: UUID = UUID(), name: String, price: String, categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0) {
         self.id = id
         self.name = name
         self.price = price
@@ -163,15 +165,17 @@ struct Product: Codable, Identifiable, Equatable {
         self.imageData = imageData
         self.description = description
         self.isActive = isActive
+        self.imageOffsetX = imageOffsetX
+        self.imageOffsetY = imageOffsetY
     }
     
     static func == (lhs: Product, rhs: Product) -> Bool {
         lhs.id == rhs.id
     }
     
-    // 自定义 Codable 兼容旧数据（isActive 字段不存在时默认为 true）
+    // 自定义 Codable 兼容旧数据
     enum CodingKeys: String, CodingKey {
-        case id, name, price, categoryId, imageData, description, isActive
+        case id, name, price, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY
     }
     
     init(from decoder: Decoder) throws {
@@ -183,6 +187,8 @@ struct Product: Codable, Identifiable, Equatable {
         imageData = try c.decodeIfPresent(Data.self, forKey: .imageData)
         description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
         isActive = try c.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
+        imageOffsetX = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetX) ?? 0
+        imageOffsetY = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetY) ?? 0
     }
     
     func encode(to encoder: Encoder) throws {
@@ -194,6 +200,8 @@ struct Product: Codable, Identifiable, Equatable {
         try c.encodeIfPresent(imageData, forKey: .imageData)
         try c.encode(description, forKey: .description)
         try c.encode(isActive, forKey: .isActive)
+        try c.encode(imageOffsetX, forKey: .imageOffsetX)
+        try c.encode(imageOffsetY, forKey: .imageOffsetY)
     }
 }
 

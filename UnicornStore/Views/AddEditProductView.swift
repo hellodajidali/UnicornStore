@@ -12,10 +12,19 @@ struct AddProductView: View {
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
     @State private var showImagePicker = false
+    @State private var imageOffsetX: CGFloat = 0
+    @State private var imageOffsetY: CGFloat = 0
     
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         !price.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+    
+    private var cardWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width - 24
+        let columns = max(2, min(dataStore.storeData.gridColumns, 5))
+        let spacing: CGFloat = 10 * CGFloat(columns - 1)
+        return (screenWidth - spacing) / CGFloat(columns)
     }
     
     var body: some View {
@@ -31,17 +40,19 @@ struct AddProductView: View {
                         showImagePicker = true
                     }) {
                         if let image = productImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 180)
-                                .clipped()
-                                .cornerRadius(8)
+                            DraggableProductImage(
+                                image: image,
+                                frameWidth: cardWidth,
+                                frameHeight: cardWidth * 0.9,
+                                offsetX: $imageOffsetX,
+                                offsetY: $imageOffsetY,
+                                draggable: true
+                            )
                         } else {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                                    .frame(height: 120)
+                                    .frame(width: cardWidth, height: cardWidth * 0.9)
                                 VStack(spacing: 8) {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.system(size: 30))
@@ -52,6 +63,12 @@ struct AddProductView: View {
                                 }
                             }
                         }
+                    }
+                    
+                    if productImage != nil {
+                        Text("拖动图片可调整显示位置")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                     }
                 }
                 
@@ -153,7 +170,9 @@ struct AddProductView: View {
             price: price.trimmingCharacters(in: .whitespaces),
             categoryId: catId,
             imageData: imageData,
-            description: description.trimmingCharacters(in: .whitespaces)
+            description: description.trimmingCharacters(in: .whitespaces),
+            imageOffsetX: imageOffsetX,
+            imageOffsetY: imageOffsetY
         )
         
         dataStore.addProduct(product)
@@ -177,6 +196,15 @@ struct EditProductView: View {
     @State private var showImagePicker = false
     @State private var hasChanges = false
     @State private var isLoaded = false
+    @State private var imageOffsetX: CGFloat = 0
+    @State private var imageOffsetY: CGFloat = 0
+    
+    private var cardWidth: CGFloat {
+        let screenWidth = UIScreen.main.bounds.width - 24
+        let columns = max(2, min(dataStore.storeData.gridColumns, 5))
+        let spacing: CGFloat = 10 * CGFloat(columns - 1)
+        return (screenWidth - spacing) / CGFloat(columns)
+    }
     
     var body: some View {
         Form {
@@ -190,17 +218,19 @@ struct EditProductView: View {
                         showImagePicker = true
                     }) {
                         if let image = productImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 180)
-                                .clipped()
-                                .cornerRadius(8)
+                            DraggableProductImage(
+                                image: image,
+                                frameWidth: cardWidth,
+                                frameHeight: cardWidth * 0.9,
+                                offsetX: $imageOffsetX,
+                                offsetY: $imageOffsetY,
+                                draggable: true
+                            )
                         } else {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
-                                    .frame(height: 120)
+                                    .frame(width: cardWidth, height: cardWidth * 0.9)
                                 VStack(spacing: 8) {
                                     Image(systemName: "photo.badge.plus")
                                         .font(.system(size: 30))
@@ -214,6 +244,9 @@ struct EditProductView: View {
                     }
                     
                     if productImage != nil {
+                        Text("拖动图片可调整显示位置")
+                            .font(.caption)
+                            .foregroundColor(.gray)
                         Button("删除图片") {
                             productImage = nil
                             hasChanges = true
@@ -314,6 +347,8 @@ struct EditProductView: View {
         description = product.description
         selectedCategoryId = product.categoryId ?? dataStore.storeData.categories.first?.id
         productImage = product.image
+        imageOffsetX = product.imageOffsetX
+        imageOffsetY = product.imageOffsetY
     }
     
     private func saveChanges() {
@@ -325,7 +360,9 @@ struct EditProductView: View {
             price: price.trimmingCharacters(in: .whitespaces),
             categoryId: selectedCategoryId,
             imageData: imageData,
-            description: description.trimmingCharacters(in: .whitespaces)
+            description: description.trimmingCharacters(in: .whitespaces),
+            imageOffsetX: imageOffsetX,
+            imageOffsetY: imageOffsetY
         )
         
         dataStore.updateProduct(updated)
