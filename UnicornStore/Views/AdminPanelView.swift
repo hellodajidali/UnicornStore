@@ -437,11 +437,9 @@ struct ProductListView: View {
                 } else {
                     ForEach(filteredProducts) { product in
                         SwipeToDeleteRow {
-                            ProductRowView(product: product)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    editingProduct = product
-                                }
+                            ProductRowView(product: product) {
+                                editingProduct = product
+                            }
                         } onDelete: {
                             dataStore.deleteProduct(product)
                         }
@@ -511,6 +509,7 @@ struct ProductListView: View {
 
 struct ProductRowView: View {
     let product: Product
+    let onTap: () -> Void
     
     private var themeColor: Color {
         DataStore.shared.storeData.themeColor.toColor()
@@ -518,60 +517,65 @@ struct ProductRowView: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // 缩略图
-            if let image = product.image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .cornerRadius(8)
-                    .opacity(product.isActive ? 1 : 0.4)
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.gray.opacity(0.15))
+            // 缩略图 + 商品信息（可点击跳转编辑）
+            HStack(spacing: 12) {
+                // 缩略图
+                if let image = product.image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: 60, height: 60)
-                    Image(systemName: "photo")
-                        .foregroundColor(.gray)
+                        .cornerRadius(8)
                         .opacity(product.isActive ? 1 : 0.4)
-                }
-            }
-            
-            // 商品信息
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(product.name)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(product.isActive ? .primary : .gray)
-                    
-                    if !product.isActive {
-                        Text("已隐藏")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.gray)
-                            .cornerRadius(4)
+                } else {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.15))
+                            .frame(width: 60, height: 60)
+                        Image(systemName: "photo")
+                            .foregroundColor(.gray)
+                            .opacity(product.isActive ? 1 : 0.4)
                     }
                 }
                 
-                if DataStore.shared.storeData.showPrice {
-                    Text(product.price)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(product.isActive ? .orange : .gray)
-                }
-                
-                if !product.description.isEmpty {
-                    Text(product.description)
-                        .font(.system(size: 12))
-                        .foregroundColor(product.isActive ? .gray : .gray.opacity(0.5))
-                        .lineLimit(1)
+                // 商品信息
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(product.name)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(product.isActive ? .primary : .gray)
+                        
+                        if !product.isActive {
+                            Text("已隐藏")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.gray)
+                                .cornerRadius(4)
+                        }
+                    }
+                    
+                    if DataStore.shared.storeData.showPrice {
+                        Text(product.price)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(product.isActive ? .orange : .gray)
+                    }
+                    
+                    if !product.description.isEmpty {
+                        Text(product.description)
+                            .font(.system(size: 12))
+                            .foregroundColor(product.isActive ? .gray : .gray.opacity(0.5))
+                            .lineLimit(1)
+                    }
                 }
             }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onTap)
             
             Spacer()
             
-            // 上架/下架开关
+            // 上架/下架开关（可独立点击，不会触发编辑）
             Toggle(isOn: Binding(
                 get: { product.isActive },
                 set: { newValue in
