@@ -36,19 +36,27 @@ struct AddProductView: View {
                         .font(.subheadline)
                         .foregroundColor(.gray)
                     
-                    Button(action: {
-                        showImagePicker = true
-                    }) {
-                        if let image = productImage {
-                            DraggableProductImage(
-                                image: image,
-                                frameWidth: cardWidth,
-                                frameHeight: cardWidth * 0.9,
-                                offsetX: $imageOffsetX,
-                                offsetY: $imageOffsetY,
-                                draggable: true
-                            )
-                        } else {
+                    if let image = productImage {
+                        DraggableProductImage(
+                            image: image,
+                            frameWidth: cardWidth,
+                            frameHeight: cardWidth * 0.9,
+                            offsetX: $imageOffsetX,
+                            offsetY: $imageOffsetY,
+                            draggable: true
+                        )
+                        Text("拖动图片可调整显示位置")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Button("点击更换图片") {
+                            showImagePicker = true
+                        }
+                        .font(.caption)
+                        .foregroundColor(dataStore.storeData.themeColor.toColor())
+                    } else {
+                        Button(action: {
+                            showImagePicker = true
+                        }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
@@ -63,12 +71,6 @@ struct AddProductView: View {
                                 }
                             }
                         }
-                    }
-                    
-                    if productImage != nil {
-                        Text("拖动图片可调整显示位置")
-                            .font(.caption)
-                            .foregroundColor(.gray)
                     }
                 }
                 
@@ -214,19 +216,35 @@ struct EditProductView: View {
                         .font(.subheadline)
                         .foregroundColor(.gray)
                     
-                    Button(action: {
-                        showImagePicker = true
-                    }) {
-                        if let image = productImage {
-                            DraggableProductImage(
-                                image: image,
-                                frameWidth: cardWidth,
-                                frameHeight: cardWidth * 0.9,
-                                offsetX: $imageOffsetX,
-                                offsetY: $imageOffsetY,
-                                draggable: true
-                            )
-                        } else {
+                    if let image = productImage {
+                        DraggableProductImage(
+                            image: image,
+                            frameWidth: cardWidth,
+                            frameHeight: cardWidth * 0.9,
+                            offsetX: $imageOffsetX,
+                            offsetY: $imageOffsetY,
+                            draggable: true
+                        )
+                        Text("拖动图片可调整显示位置")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        HStack(spacing: 12) {
+                            Button("点击更换图片") {
+                                showImagePicker = true
+                            }
+                            .font(.caption)
+                            .foregroundColor(dataStore.storeData.themeColor.toColor())
+                            Button("删除图片") {
+                                productImage = nil
+                                hasChanges = true
+                            }
+                            .foregroundColor(.red)
+                            .font(.system(size: 14))
+                        }
+                    } else {
+                        Button(action: {
+                            showImagePicker = true
+                        }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
@@ -241,18 +259,6 @@ struct EditProductView: View {
                                 }
                             }
                         }
-                    }
-                    
-                    if productImage != nil {
-                        Text("拖动图片可调整显示位置")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Button("删除图片") {
-                            productImage = nil
-                            hasChanges = true
-                        }
-                        .foregroundColor(.red)
-                        .font(.system(size: 14))
                     }
                 }
                 

@@ -31,26 +31,34 @@ struct DraggableProductImage: View {
             let maxOX = max(0, (scaledW - frameWidth) / 2)
             let maxOY = max(0, (scaledH - frameHeight) / 2)
             
-            Image(uiImage: image)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: scaledW, height: scaledH)
-                .offset(x: offsetX * maxOX, y: offsetY * maxOY)
-                .gesture(draggable ? dragGesture(maxOX: maxOX, maxOY: maxOY) : nil)
-                .clipped()
-                .frame(width: frameWidth, height: frameHeight)
+            if draggable {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: scaledW, height: scaledH)
+                    .offset(x: offsetX * maxOX, y: offsetY * maxOY)
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                let dx = maxOX > 0 ? value.translation.width / maxOX : 0
+                                let dy = maxOY > 0 ? value.translation.height / maxOY : 0
+                                offsetX = max(-1, min(1, offsetX + dx))
+                                offsetY = max(-1, min(1, offsetY + dy))
+                            }
+                    )
+                    .clipped()
+                    .frame(width: frameWidth, height: frameHeight)
+            } else {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: scaledW, height: scaledH)
+                    .offset(x: offsetX * maxOX, y: offsetY * maxOY)
+                    .clipped()
+                    .frame(width: frameWidth, height: frameHeight)
+            }
         }
         .frame(width: frameWidth, height: frameHeight)
         .cornerRadius(8)
-    }
-    
-    private func dragGesture(maxOX: CGFloat, maxOY: CGFloat) -> some Gesture {
-        DragGesture()
-            .onChanged { value in
-                let dx = maxOX > 0 ? value.translation.width / maxOX : 0
-                let dy = maxOY > 0 ? value.translation.height / maxOY : 0
-                offsetX = max(-1, min(1, offsetX + dx))
-                offsetY = max(-1, min(1, offsetY + dy))
-            }
     }
 }
