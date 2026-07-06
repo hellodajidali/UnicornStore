@@ -577,7 +577,7 @@ struct ProductRowView: View {
                 set: { newValue in
                     if let idx = DataStore.shared.storeData.products.firstIndex(where: { $0.id == product.id }) {
                         DataStore.shared.storeData.products[idx].isActive = newValue
-                        DataStore.shared.saveData()
+                        DataStore.shared.saveToDisk()
                     }
                 }
             )) { }
