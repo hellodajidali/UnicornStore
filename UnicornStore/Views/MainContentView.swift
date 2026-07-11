@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 
 // MARK: - 主界面
 
@@ -9,7 +10,6 @@ struct MainContentView: View {
     @State private var enlargedProduct: Product? = nil
     @State private var showQuoteAlert = false
     @State private var quoteAlertMessage = ""
-    @State private var quoteSaver: PhotoLibrarySaver? = nil
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
@@ -161,214 +161,223 @@ struct MainContentView: View {
             return
         }
         
-        let quoteView = QuoteView(
-            storeName: dataStore.storeData.storeName,
-            products: activeProducts,
-            categories: dataStore.storeData.categories,
-            showPrice: dataStore.storeData.showPrice
-        )
-        
-        let controller = UIHostingController(rootView: quoteView)
-        guard let hostingView = controller.view else {
-            quoteAlertMessage = "生成图片失败"
-            showQuoteAlert = true
-            return
-        }
-        
-        // 先计算实际尺寸
-        let targetWidth: CGFloat = 390
-        hostingView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 100)
-        hostingView.backgroundColor = UIColor.white
-        
-        let fittingSize = hostingView.systemLayoutSizeFitting(
-            CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height),
-            withHorizontalFittingPriority: .required,
-            verticalFittingPriority: .fittingSizeLevel
-        )
-        
-        guard fittingSize.width > 0, fittingSize.height > 0 else {
-            quoteAlertMessage = "生成图片失败：尺寸异常"
-            showQuoteAlert = true
-            return
-        }
-        
-        // 把 controller 加到临时 window 层级，SwiftUI 渲染必须挂 window
-        let tempWindow = UIWindow(frame: CGRect(origin: .zero, size: fittingSize))
-        tempWindow.rootViewController = controller
-        tempWindow.isHidden = false
-        tempWindow.makeKey()
-        
-        hostingView.frame = CGRect(origin: .zero, size: fittingSize)
-        hostingView.setNeedsLayout()
-        hostingView.layoutIfNeeded()
-        
-        let renderer = UIGraphicsImageRenderer(size: fittingSize)
-        let image = renderer.image { ctx in
-            hostingView.drawHierarchy(in: hostingView.bounds, afterScreenUpdates: true)
-        }
-        
-        // 清理临时 window
-        tempWindow.resignKey()
-        tempWindow.isHidden = true
-        
-        let saver = PhotoLibrarySaver { success in
-            DispatchQueue.main.async {
-                self.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
-                self.showQuoteAlert = true
-                self.quoteSaver = nil
-            }
-        }
-        quoteSaver = saver
-        saver.save(image)
-    }
-}
-
-// MARK: - 报价单视图
-
-struct QuoteView: View {
-    let storeName: String
-    let products: [Product]
-    let categories: [Category]
-    let showPrice: Bool
-    
-    private var dateStr: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "zh_CN")
-        f.dateFormat = "yyyy年MM月dd日"
-        return f.string(from: Date())
-    }
-    
-    /// 按分类分组的商品
-    private var groupedProducts: [(category: Category, products: [Product])] {
-        let realCats = categories.filter { $0.name != "全部" }
-        var result: [(Category, [Product])] = []
+        // 按分类分组
+        let realCats = dataStore.storeData.categories.filter { $0.name != "全部" }
+        var groups: [(name: String, products: [Product])] = []
         for cat in realCats {
-            let catProducts = products.filter { $0.categoryId == cat.id }
+            let catProducts = activeProducts.filter { $0.categoryId == cat.id }
             if !catProducts.isEmpty {
-                result.append((cat, catProducts))
+                groups.append((cat.name, catProducts))
             }
         }
-        // 没有分类的商品放在"其他"里
-        let uncategorized = products.filter { p in !realCats.contains(where: { $0.id == p.categoryId }) }
+        let uncategorized = activeProducts.filter { p in !realCats.contains(where: { $0.id == p.categoryId }) }
         if !uncategorized.isEmpty {
-            let otherCat = Category(name: "其他")
-            result.append((otherCat, uncategorized))
+            groups.append(("其他", uncategorized))
         }
-        return result
-    }
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // 头部
-            VStack(spacing: 6) {
-                Text(storeName)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(.black)
-                
-                Text(dateStr)
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-                
-                Text("—— 报价单 ——")
-                    .font(.system(size: 12))
-                    .foregroundColor(.gray.opacity(0.7))
-                    .padding(.top, 2)
-            }
-            .padding(.top, 32)
-            .padding(.bottom, 16)
+        
+        // 绘制参数
+        let pageWidth: CGFloat = 390
+        let margin: CGFloat = 24
+        let contentWidth = pageWidth - margin * 2
+        let leftX = margin
+        let priceRightX = pageWidth - margin
+        
+        // 计算总高度
+        var totalHeight: CGFloat = 60  // 顶部内边距
+        totalHeight += 50  // 店名
+        totalHeight += 30  // 日期
+        totalHeight += 20  // 分隔线
+        totalHeight += 8   // 间距
+        for group in groups {
+            totalHeight += 40  // 分类标题
+            totalHeight += CGFloat(group.products.count) * 36  // 每行商品
+            totalHeight += 12  // 分类间距
+        }
+        totalHeight += 50  // 底部"谢谢惠顾"
+        totalHeight += 40  // 底部内边距
+        
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: pageWidth, height: totalHeight))
+        let showP = dataStore.storeData.showPrice
+        let storeName = dataStore.storeData.storeName
+        
+        // 日期
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "zh_CN")
+        df.dateFormat = "yyyy年MM月dd日"
+        let dateStr = df.string(from: Date())
+        
+        let image = renderer.image { ctx in
+            let c = ctx.cgContext
             
-            Divider()
-                .padding(.horizontal, 20)
+            // 白色背景
+            c.setFillColor(UIColor.white.cgColor)
+            c.fill(CGRect(x: 0, y: 0, width: pageWidth, height: totalHeight))
             
-            // 商品列表
-            ForEach(Array(groupedProducts.enumerated()), id: \.offset) { sectionIndex, group in
-                VStack(alignment: .leading, spacing: 0) {
-                    // 分类标题
-                    Text(group.category.name)
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
+            var y: CGFloat = 60
+            
+            // —— 店名 ——
+            let titleAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 26),
+                .foregroundColor: UIColor.black
+            ]
+            let titleSize = (storeName as NSString).size(withAttributes: titleAttr)
+            (storeName as NSString).draw(
+                at: CGPoint(x: (pageWidth - titleSize.width) / 2, y: y),
+                withAttributes: titleAttr
+            )
+            y += 40
+            
+            // —— 日期 ——
+            let dateAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 14),
+                .foregroundColor: UIColor.gray
+            ]
+            let dateSize = (dateStr as NSString).size(withAttributes: dateAttr)
+            (dateStr as NSString).draw(
+                at: CGPoint(x: (pageWidth - dateSize.width) / 2, y: y),
+                withAttributes: dateAttr
+            )
+            y += 24
+            
+            // —— 分隔线 ——
+            c.setStrokeColor(UIColor.lightGray.withAlphaComponent(0.5).cgColor)
+            c.setLineWidth(1)
+            c.move(to: CGPoint(x: margin, y: y))
+            c.addLine(to: CGPoint(x: pageWidth - margin, y: y))
+            c.strokePath()
+            y += 20
+            
+            for groupIdx in 0..<groups.count {
+                let group = groups[groupIdx]
+                
+                // —— 分类名 ——
+                let catAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.boldSystemFont(ofSize: 17),
+                    .foregroundColor: UIColor.black
+                ]
+                (group.name as NSString).draw(at: CGPoint(x: leftX, y: y), withAttributes: catAttr)
+                y += 32
+                
+                // —— 商品行 ——
+                for prodIdx in 0..<group.products.count {
+                    let product = group.products[prodIdx]
                     
-                    // 该分类下的商品
-                    ForEach(Array(group.products.enumerated()), id: \.element.id) { index, product in
-                        HStack(alignment: .center) {
-                            Text(product.name)
-                                .font(.system(size: 15))
-                                .foregroundColor(.black)
-                            
-                            Spacer()
-                            
-                            if showPrice {
-                                HStack(spacing: 4) {
-                                    if product.hasValidOriginalPrice {
-                                        Text(product.originalPrice)
-                                            .font(.system(size: 11))
-                                            .foregroundColor(.gray)
-                                            .strikethrough()
-                                    }
-                                    
-                                    Text(product.price)
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.black)
-                                    
-                                    if product.hasValidOriginalPrice {
-                                        Text(product.isPriceDown ? "降" : "涨")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(product.isPriceDown ? .green : .red)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 6)
+                    // 商品名
+                    let nameAttr: [NSAttributedString.Key: Any] = [
+                        .font: UIFont.systemFont(ofSize: 15),
+                        .foregroundColor: UIColor.black
+                    ]
+                    
+                    if showP {
+                        // 有价格时，商品名左侧 + 价格右侧
+                        let name = product.name as NSString
+                        let nameW = min(name.size(withAttributes: nameAttr).width, contentWidth * 0.55)
+                        name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
                         
-                        if index < group.products.count - 1 {
-                            Divider()
-                                .padding(.leading, 20)
+                        // 现价
+                        let priceAttr: [NSAttributedString.Key: Any] = [
+                            .font: UIFont.boldSystemFont(ofSize: 15),
+                            .foregroundColor: UIColor.black
+                        ]
+                        let priceStr = product.price as NSString
+                        let priceW = priceStr.size(withAttributes: priceAttr).width
+                        var px = priceRightX - priceW
+                        
+                        // 原价 + 涨/降
+                        if product.hasValidOriginalPrice {
+                            // 原价（删除线）
+                            let origAttr: [NSAttributedString.Key: Any] = [
+                                .font: UIFont.systemFont(ofSize: 11),
+                                .foregroundColor: UIColor.gray,
+                                .strikethroughStyle: NSUnderlineStyle.single.rawValue
+                            ]
+                            let origStr = product.originalPrice as NSString
+                            let origW = origStr.size(withAttributes: origAttr).width
+                            px = px - origW - 6
+                            origStr.draw(at: CGPoint(x: px, y: y + 4), withAttributes: origAttr)
+                            
+                            // 涨/降标志
+                            let isDown = product.isPriceDown
+                            let changeAttr: [NSAttributedString.Key: Any] = [
+                                .font: UIFont.boldSystemFont(ofSize: 10),
+                                .foregroundColor: isDown ? UIColor.green : UIColor.red
+                            ]
+                            let changeStr = (isDown ? "降" : "涨") as NSString
+                            let changeW = changeStr.size(withAttributes: changeAttr).width
+                            px = px - changeW - 4
+                            changeStr.draw(at: CGPoint(x: px, y: y + 5), withAttributes: changeAttr)
                         }
+                        
+                        // 画现价
+                        priceStr.draw(at: CGPoint(x: priceRightX - priceW, y: y + 2), withAttributes: priceAttr)
+                        
+                    } else {
+                        // 无价格，商品名占整行
+                        let name = product.name as NSString
+                        name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
                     }
+                    
+                    y += 36
                 }
                 
-                if sectionIndex < groupedProducts.count - 1 {
-                    Divider()
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 4)
+                // 分类间分隔线
+                if groupIdx < groups.count - 1 {
+                    y += 4
+                    c.setStrokeColor(UIColor.lightGray.withAlphaComponent(0.3).cgColor)
+                    c.setLineWidth(0.5)
+                    c.move(to: CGPoint(x: margin + 20, y: y))
+                    c.addLine(to: CGPoint(x: pageWidth - margin, y: y))
+                    c.strokePath()
+                    y += 8
                 }
             }
             
-            Divider()
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
+            // —— 底部 ——
+            y += 8
+            c.setStrokeColor(UIColor.lightGray.withAlphaComponent(0.5).cgColor)
+            c.setLineWidth(1)
+            c.move(to: CGPoint(x: margin, y: y))
+            c.addLine(to: CGPoint(x: pageWidth - margin, y: y))
+            c.strokePath()
+            y += 16
             
-            // 底部
-            Text("谢谢惠顾！欢迎下次光临")
-                .font(.system(size: 14))
-                .foregroundColor(.gray)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
+            let footerAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 14),
+                .foregroundColor: UIColor.gray
+            ]
+            let footer = "谢谢惠顾！欢迎下次光临"
+            let footerSize = (footer as NSString).size(withAttributes: footerAttr)
+            (footer as NSString).draw(
+                at: CGPoint(x: (pageWidth - footerSize.width) / 2, y: y),
+                withAttributes: footerAttr
+            )
         }
-        .frame(maxWidth: .infinity)
-        .background(Color.white)
-    }
-}
-
-// MARK: - 相册保存辅助
-
-class PhotoLibrarySaver: NSObject {
-    let callback: (Bool) -> Void
-    
-    init(callback: @escaping (Bool) -> Void) {
-        self.callback = callback
-    }
-    
-    func save(_ image: UIImage) {
-        UIImageWriteToSavedPhotosAlbum(image, self, #selector(didFinishSaving), nil)
-    }
-    
-    @objc func didFinishSaving(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
-        callback(error == nil)
+        
+        // 用 PHPhotoLibrary 保存（现代 API，不涉及 Objective-C selector 回调）
+        PHPhotoLibrary.requestAuthorization { [self] status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    self.quoteAlertMessage = "需要相册权限才能保存报价单"
+                    self.showQuoteAlert = true
+                }
+                return
+            }
+            
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        self.quoteAlertMessage = "报价单已保存到相册 📄"
+                    } else if let err = error {
+                        self.quoteAlertMessage = "保存失败：\(err.localizedDescription)"
+                    } else {
+                        self.quoteAlertMessage = "保存失败，请重试"
+                    }
+                    self.showQuoteAlert = true
+                }
+            }
+        }
     }
 }
 
