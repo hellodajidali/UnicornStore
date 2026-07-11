@@ -22,8 +22,7 @@
     <string>2</string>
     <key>CFBundleLocalizations</key>
     <array>
-        <string>zh_CN</string>
-        <string>zh_Hans</string>
+        <string>zh-Hans</string>
         <string>en</string>
     </array>
     <key>LSRequiresIPhoneOS</key>
