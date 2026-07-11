@@ -92,6 +92,38 @@ struct AdminPanelView: View {
                     ThemeColorEditView()
                 }
                 
+                // 报价单设置
+                Section(header: Text("报价单管理").font(.headline)) {
+                    Toggle(isOn: Binding(
+                        get: { dataStore.storeData.quoteSingleColumn },
+                        set: { dataStore.storeData.quoteSingleColumn = $0 }
+                    )) {
+                        HStack {
+                            Image(systemName: "text.viewfinder")
+                                .foregroundColor(themeColor)
+                            VStack(alignment: .leading) {
+                                Text("单排显示")
+                                    .font(.system(size: 15, weight: .medium))
+                                Text("关闭后商品双排显示")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("底部文字：")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        TextField("输入底部文字", text: Binding(
+                            get: { dataStore.storeData.quoteFooter },
+                            set: { dataStore.storeData.quoteFooter = $0 }
+                        ))
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    .padding(.vertical, 4)
+                }
+                
                 // 数据管理
                 Section(header: Text("数据管理").font(.headline)) {
                     Button(action: exportBackup) {

@@ -31,6 +31,10 @@ struct StoreData: Codable {
     var announcementBgColor: String  // hex颜色，默认浅灰
     var storeNameBgColor: String     // hex颜色，默认白色
     
+    // 报价单设置
+    var quoteSingleColumn: Bool  // true=单排显示，false=双排
+    var quoteFooter: String      // 底部文字
+    
     static func defaultData() -> StoreData {
         let allCategory = Category(id: UUID(), name: "全部")
         let cat1 = Category(id: UUID(), name: "热门推荐")
@@ -52,7 +56,9 @@ struct StoreData: Codable {
             showTextOnly: false,
             themeColor: "#9966CC",
             announcementBgColor: "#F0F0F0",
-            storeNameBgColor: "#FFFFFF"
+            storeNameBgColor: "#FFFFFF",
+            quoteSingleColumn: false,
+            quoteFooter: "谢谢惠顾！欢迎下次光临"
         )
     }
     
@@ -60,13 +66,14 @@ struct StoreData: Codable {
     enum CodingKeys: String, CodingKey {
         case storeName, storeNameFontSize, storeNameColor, announcement
         case categories, products, gridColumns, showPrice, showTextOnly, themeColor
-        case announcementBgColor, storeNameBgColor
+        case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter
     }
     
     init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
          announcement: Announcement, categories: [Category], products: [Product],
          gridColumns: Int, showPrice: Bool, showTextOnly: Bool = false, themeColor: String,
-         announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF") {
+         announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF",
+         quoteSingleColumn: Bool = false, quoteFooter: String = "谢谢惠顾！欢迎下次光临") {
         self.storeName = storeName
         self.storeNameFontSize = storeNameFontSize
         self.storeNameColor = storeNameColor
@@ -79,6 +86,8 @@ struct StoreData: Codable {
         self.themeColor = themeColor
         self.announcementBgColor = announcementBgColor
         self.storeNameBgColor = storeNameBgColor
+        self.quoteSingleColumn = quoteSingleColumn
+        self.quoteFooter = quoteFooter
     }
     
     init(from decoder: Decoder) throws {
@@ -95,6 +104,8 @@ struct StoreData: Codable {
         themeColor = try c.decode(String.self, forKey: .themeColor)
         announcementBgColor = try c.decodeIfPresent(String.self, forKey: .announcementBgColor) ?? "#F0F0F0"
         storeNameBgColor = try c.decodeIfPresent(String.self, forKey: .storeNameBgColor) ?? "#FFFFFF"
+        quoteSingleColumn = try c.decodeIfPresent(Bool.self, forKey: .quoteSingleColumn) ?? false
+        quoteFooter = try c.decodeIfPresent(String.self, forKey: .quoteFooter) ?? "谢谢惠顾！欢迎下次光临"
     }
     
     func encode(to encoder: Encoder) throws {
@@ -111,6 +122,8 @@ struct StoreData: Codable {
         try c.encode(themeColor, forKey: .themeColor)
         try c.encode(announcementBgColor, forKey: .announcementBgColor)
         try c.encode(storeNameBgColor, forKey: .storeNameBgColor)
+        try c.encode(quoteSingleColumn, forKey: .quoteSingleColumn)
+        try c.encode(quoteFooter, forKey: .quoteFooter)
     }
 }
 

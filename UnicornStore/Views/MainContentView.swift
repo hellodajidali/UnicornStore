@@ -10,7 +10,7 @@ struct MainContentView: View {
     @State private var showQuoteAlert = false
     @State private var quoteAlertMessage = ""
     @State private var showShareSheet = false
-    @State private var shareImageURL: URL?
+    @State private var shareImage: UIImage?
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
@@ -80,8 +80,8 @@ struct MainContentView: View {
                 Alert(title: Text("报价单"), message: Text(quoteAlertMessage), dismissButton: .default(Text("确定")))
             }
             .sheet(isPresented: $showShareSheet) {
-                if let url = shareImageURL {
-                    ShareSheet(activityItems: [url])
+                if let image = shareImage {
+                    ShareSheet(activityItems: [image])
                 }
             }
             .onAppear {
@@ -156,6 +156,55 @@ struct MainContentView: View {
         .padding(.vertical, 10)
         .background(dataStore.storeData.storeNameBgColor.toColor())
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
+    }
+    
+    // MARK: - 绘制单个商品行
+    private func drawQuoteProduct(c: CGContext, product: Product, y: CGFloat, leftX: CGFloat, priceRightX: CGFloat, showP: Bool) {
+        let nameAttr: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 15),
+            .foregroundColor: UIColor.black
+        ]
+        let name = product.name as NSString
+        
+        if showP {
+            let maxNameW = priceRightX - leftX - 10
+            let nameW = min(name.size(withAttributes: nameAttr).width, maxNameW)
+            name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
+            
+            let priceAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 15),
+                .foregroundColor: UIColor.black
+            ]
+            let priceStr = product.price as NSString
+            let priceW = priceStr.size(withAttributes: priceAttr).width
+            var px = priceRightX - priceW
+            
+            if product.hasValidOriginalPrice {
+                let origAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11),
+                    .foregroundColor: UIColor.gray,
+                    .strikethroughStyle: NSUnderlineStyle.single.rawValue
+                ]
+                let origStr = product.originalPrice as NSString
+                let origW = origStr.size(withAttributes: origAttr).width
+                px = px - origW - 6
+                origStr.draw(at: CGPoint(x: px, y: y + 4), withAttributes: origAttr)
+                
+                let isDown = product.isPriceDown
+                let changeAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.boldSystemFont(ofSize: 10),
+                    .foregroundColor: isDown ? UIColor.green : UIColor.red
+                ]
+                let changeStr = (isDown ? "降" : "涨") as NSString
+                let changeW = changeStr.size(withAttributes: changeAttr).width
+                px = px - changeW - 4
+                changeStr.draw(at: CGPoint(x: px, y: y + 5), withAttributes: changeAttr)
+            }
+            
+            priceStr.draw(at: CGPoint(x: priceRightX - priceW, y: y + 2), withAttributes: priceAttr)
+        } else {
+            name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
+        }
     }
     
     // MARK: - 生成报价单
@@ -265,65 +314,25 @@ struct MainContentView: View {
                 y += 32
                 
                 // —— 商品行 ——
-                for prodIdx in 0..<group.products.count {
-                    let product = group.products[prodIdx]
-                    
-                    // 商品名
-                    let nameAttr: [NSAttributedString.Key: Any] = [
-                        .font: UIFont.systemFont(ofSize: 15),
-                        .foregroundColor: UIColor.black
-                    ]
-                    
-                    if showP {
-                        // 有价格时，商品名左侧 + 价格右侧
-                        let name = product.name as NSString
-                        let nameW = min(name.size(withAttributes: nameAttr).width, contentWidth * 0.55)
-                        name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
-                        
-                        // 现价
-                        let priceAttr: [NSAttributedString.Key: Any] = [
-                            .font: UIFont.boldSystemFont(ofSize: 15),
-                            .foregroundColor: UIColor.black
-                        ]
-                        let priceStr = product.price as NSString
-                        let priceW = priceStr.size(withAttributes: priceAttr).width
-                        var px = priceRightX - priceW
-                        
-                        // 原价 + 涨/降
-                        if product.hasValidOriginalPrice {
-                            // 原价（删除线）
-                            let origAttr: [NSAttributedString.Key: Any] = [
-                                .font: UIFont.systemFont(ofSize: 11),
-                                .foregroundColor: UIColor.gray,
-                                .strikethroughStyle: NSUnderlineStyle.single.rawValue
-                            ]
-                            let origStr = product.originalPrice as NSString
-                            let origW = origStr.size(withAttributes: origAttr).width
-                            px = px - origW - 6
-                            origStr.draw(at: CGPoint(x: px, y: y + 4), withAttributes: origAttr)
-                            
-                            // 涨/降标志
-                            let isDown = product.isPriceDown
-                            let changeAttr: [NSAttributedString.Key: Any] = [
-                                .font: UIFont.boldSystemFont(ofSize: 10),
-                                .foregroundColor: isDown ? UIColor.green : UIColor.red
-                            ]
-                            let changeStr = (isDown ? "降" : "涨") as NSString
-                            let changeW = changeStr.size(withAttributes: changeAttr).width
-                            px = px - changeW - 4
-                            changeStr.draw(at: CGPoint(x: px, y: y + 5), withAttributes: changeAttr)
-                        }
-                        
-                        // 画现价
-                        priceStr.draw(at: CGPoint(x: priceRightX - priceW, y: y + 2), withAttributes: priceAttr)
-                        
-                    } else {
-                        // 无价格，商品名占整行
-                        let name = product.name as NSString
-                        name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
+                let singleCol = dataStore.storeData.quoteSingleColumn
+                if singleCol {
+                    for product in group.products {
+                        y = drawQuoteProduct(c: c, product: product, y: y, leftX: leftX, priceRightX: priceRightX, showP: showP)
+                        y += 36
                     }
-                    
-                    y += 36
+                } else {
+                    let halfW = contentWidth / 2
+                    let midX = leftX + halfW
+                    for i in stride(from: 0, to: group.products.count, by: 2) {
+                        let p1 = group.products[i]
+                        let p1Right = midX - 6
+                        drawQuoteProduct(c: c, product: p1, y: y, leftX: leftX, priceRightX: p1Right, showP: showP)
+                        if i + 1 < group.products.count {
+                            let p2 = group.products[i + 1]
+                            drawQuoteProduct(c: c, product: p2, y: y, leftX: midX + 6, priceRightX: priceRightX, showP: showP)
+                        }
+                        y += 36
+                    }
                 }
                 
                 // 分类间分隔线
@@ -347,11 +356,11 @@ struct MainContentView: View {
             c.strokePath()
             y += 16
             
+            let footer = dataStore.storeData.quoteFooter
             let footerAttr: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 14),
                 .foregroundColor: UIColor.gray
             ]
-            let footer = "谢谢惠顾！欢迎下次光临"
             let footerSize = (footer as NSString).size(withAttributes: footerAttr)
             (footer as NSString).draw(
                 at: CGPoint(x: (pageWidth - footerSize.width) / 2, y: y),
@@ -359,19 +368,8 @@ struct MainContentView: View {
             )
         }
         
-        // 保存到临时文件并弹出分享
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileName = "报价单_\(Int(Date().timeIntervalSince1970)).png"
-        let fileURL = tempDir.appendingPathComponent(fileName)
-        
-        do {
-            try image.pngData()?.write(to: fileURL)
-            shareImageURL = fileURL
-            showShareSheet = true
-        } catch {
-            quoteAlertMessage = "保存失败：\(error.localizedDescription)"
-            showQuoteAlert = true
-        }
+        shareImage = image
+        showShareSheet = true
     }
 }
 
