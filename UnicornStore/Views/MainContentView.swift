@@ -198,7 +198,7 @@ struct MainContentView: View {
                 let isDown = product.isPriceDown
                 let changeAttr: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: 10),
-                    .foregroundColor: isDown ? UIColor.green : UIColor.red
+                    .foregroundColor: isDown ? UIColor.systemGreen : UIColor.systemRed
                 ]
                 let changeStr = (isDown ? "降" : "涨") as NSString
                 changeStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: changeAttr)
