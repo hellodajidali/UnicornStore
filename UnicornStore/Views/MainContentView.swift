@@ -165,20 +165,14 @@ struct MainContentView: View {
             .foregroundColor: UIColor.black
         ]
         let name = product.name as NSString
+        var cx = leftX
+        
+        // 商品名
+        name.draw(at: CGPoint(x: cx, y: y + 2), withAttributes: nameAttr)
+        cx += name.size(withAttributes: nameAttr).width + 8
         
         if showP {
-            let maxNameW = priceRightX - leftX - 10
-            let nameW = min(name.size(withAttributes: nameAttr).width, maxNameW)
-            name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
-            
-            let priceAttr: [NSAttributedString.Key: Any] = [
-                .font: UIFont.boldSystemFont(ofSize: 15),
-                .foregroundColor: UIColor.black
-            ]
-            let priceStr = product.price as NSString
-            let priceW = priceStr.size(withAttributes: priceAttr).width
-            var px = priceRightX - priceW
-            
+            // 原价
             if product.hasValidOriginalPrice {
                 let origAttr: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11),
@@ -186,22 +180,40 @@ struct MainContentView: View {
                     .strikethroughStyle: NSUnderlineStyle.single.rawValue
                 ]
                 let origStr = product.originalPrice as NSString
-                let origW = origStr.size(withAttributes: origAttr).width
-                px = px - origW - 6
-                origStr.draw(at: CGPoint(x: px, y: y + 4), withAttributes: origAttr)
-                
+                origStr.draw(at: CGPoint(x: cx, y: y + 4), withAttributes: origAttr)
+                cx += origStr.size(withAttributes: origAttr).width + 6
+            }
+            
+            // 现价
+            let priceAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 15),
+                .foregroundColor: UIColor.black
+            ]
+            let priceStr = product.price as NSString
+            priceStr.draw(at: CGPoint(x: cx, y: y + 2), withAttributes: priceAttr)
+            cx += priceStr.size(withAttributes: priceAttr).width + 6
+            
+            // 涨/降
+            if product.hasValidOriginalPrice {
                 let isDown = product.isPriceDown
                 let changeAttr: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: 10),
                     .foregroundColor: isDown ? UIColor.green : UIColor.red
                 ]
                 let changeStr = (isDown ? "降" : "涨") as NSString
-                let changeW = changeStr.size(withAttributes: changeAttr).width
-                px = px - changeW - 4
-                changeStr.draw(at: CGPoint(x: px, y: y + 5), withAttributes: changeAttr)
+                changeStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: changeAttr)
+                cx += changeStr.size(withAttributes: changeAttr).width + 6
             }
             
-            priceStr.draw(at: CGPoint(x: priceRightX - priceW, y: y + 2), withAttributes: priceAttr)
+            // 活动标签
+            if DataStore.shared.storeData.showPromotion && !product.promotion.isEmpty {
+                let promoAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.boldSystemFont(ofSize: 10),
+                    .foregroundColor: UIColor.red
+                ]
+                let promoStr = "活动" as NSString
+                promoStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: promoAttr)
+            }
         } else {
             name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)
         }

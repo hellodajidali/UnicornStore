@@ -88,6 +88,23 @@ struct AdminPanelView: View {
                         showPriceToggle = dataStore.storeData.showPrice
                     }
                     
+                    Toggle(isOn: Binding(
+                        get: { dataStore.storeData.showPromotion },
+                        set: { dataStore.storeData.showPromotion = $0 }
+                    )) {
+                        HStack {
+                            Image(systemName: "tag.fill")
+                                .foregroundColor(.red)
+                            VStack(alignment: .leading) {
+                                Text("显示活动标签")
+                                    .font(.system(size: 15, weight: .medium))
+                                Text("关闭后商品活动信息不显示")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    
                     // 整体主题色设置
                     ThemeColorEditView()
                 }

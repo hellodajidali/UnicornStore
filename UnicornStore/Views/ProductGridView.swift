@@ -102,6 +102,12 @@ struct TextOnlyProductRow: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(product.isPriceDown ? .green : .red)
                 }
+                // 活动标签
+                if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
+                    Text("活动")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.red)
+                }
             }
             
             Spacer(minLength: 0)
@@ -222,6 +228,13 @@ struct ProductCard: View {
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(product.isPriceDown ? .green : .red)
                         }
+                    }
+                    
+                    // 活动标签
+                    if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
+                        Text("活动")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.red)
                     }
                 }
                 .padding(.bottom, 8)

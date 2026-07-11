@@ -9,6 +9,7 @@ struct AddProductView: View {
     @State private var name: String = ""
     @State private var price: String = "¥"
     @State private var originalPrice: String = "¥"
+    @State private var promotion: String = ""
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
@@ -98,14 +99,11 @@ struct AddProductView: View {
                         .keyboardType(.decimalPad)
                 }
                 
-                VStack(alignment: .leading) {
-                    Text("描述")
+                HStack {
+                    Text("活动")
                         .foregroundColor(.gray)
-                    TextEditor(text: $description)
-                        .frame(minHeight: 60)
-                        .padding(4)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
+                    TextField("如: 限时特价（留空不显示）", text: $promotion)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
                 }
             }
             
@@ -184,7 +182,8 @@ struct AddProductView: View {
             imageData: imageData,
             description: description.trimmingCharacters(in: .whitespaces),
             imageOffsetX: imageOffsetX,
-            imageOffsetY: imageOffsetY
+            imageOffsetY: imageOffsetY,
+            promotion: promotion.trimmingCharacters(in: .whitespaces)
         )
         
         dataStore.addProduct(product)
@@ -203,6 +202,7 @@ struct EditProductView: View {
     @State private var name: String = ""
     @State private var price: String = "¥"
     @State private var originalPrice: String = ""
+    @State private var promotion: String = ""
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
@@ -297,15 +297,12 @@ struct EditProductView: View {
                         .onChange(of: originalPrice) { _ in hasChanges = true }
                 }
                 
-                VStack(alignment: .leading) {
-                    Text("描述")
+                HStack {
+                    Text("活动")
                         .foregroundColor(.gray)
-                    TextEditor(text: $description)
-                        .frame(minHeight: 60)
-                        .padding(4)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                        .onChange(of: description) { _ in hasChanges = true }
+                    TextField("活动信息（留空不显示）", text: $promotion)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onChange(of: promotion) { _ in hasChanges = true }
                 }
             }
             
@@ -370,6 +367,7 @@ struct EditProductView: View {
         name = product.name
         price = product.price
         originalPrice = product.originalPrice
+        promotion = product.promotion
         description = product.description
         selectedCategoryId = product.categoryId ?? dataStore.storeData.categories.first?.id
         productImage = product.image
@@ -389,7 +387,8 @@ struct EditProductView: View {
             imageData: imageData,
             description: description.trimmingCharacters(in: .whitespaces),
             imageOffsetX: imageOffsetX,
-            imageOffsetY: imageOffsetY
+            imageOffsetY: imageOffsetY,
+            promotion: promotion.trimmingCharacters(in: .whitespaces)
         )
         
         dataStore.updateProduct(updated)

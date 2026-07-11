@@ -35,6 +35,9 @@ struct StoreData: Codable {
     var quoteSingleColumn: Bool  // true=单排显示，false=双排
     var quoteFooter: String      // 底部文字
     
+    // 活动设置
+    var showPromotion: Bool  // true=显示活动标签
+    
     static func defaultData() -> StoreData {
         let allCategory = Category(id: UUID(), name: "全部")
         let cat1 = Category(id: UUID(), name: "热门推荐")
@@ -58,7 +61,8 @@ struct StoreData: Codable {
             announcementBgColor: "#F0F0F0",
             storeNameBgColor: "#FFFFFF",
             quoteSingleColumn: false,
-            quoteFooter: "谢谢惠顾！欢迎下次光临"
+            quoteFooter: "谢谢惠顾！欢迎下次光临",
+            showPromotion: true
         )
     }
     
@@ -66,14 +70,15 @@ struct StoreData: Codable {
     enum CodingKeys: String, CodingKey {
         case storeName, storeNameFontSize, storeNameColor, announcement
         case categories, products, gridColumns, showPrice, showTextOnly, themeColor
-        case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter
+        case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter, showPromotion
     }
     
     init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
          announcement: Announcement, categories: [Category], products: [Product],
          gridColumns: Int, showPrice: Bool, showTextOnly: Bool = false, themeColor: String,
          announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF",
-         quoteSingleColumn: Bool = false, quoteFooter: String = "谢谢惠顾！欢迎下次光临") {
+         quoteSingleColumn: Bool = false, quoteFooter: String = "谢谢惠顾！欢迎下次光临",
+         showPromotion: Bool = true) {
         self.storeName = storeName
         self.storeNameFontSize = storeNameFontSize
         self.storeNameColor = storeNameColor
@@ -88,6 +93,7 @@ struct StoreData: Codable {
         self.storeNameBgColor = storeNameBgColor
         self.quoteSingleColumn = quoteSingleColumn
         self.quoteFooter = quoteFooter
+        self.showPromotion = showPromotion
     }
     
     init(from decoder: Decoder) throws {
@@ -106,6 +112,7 @@ struct StoreData: Codable {
         storeNameBgColor = try c.decodeIfPresent(String.self, forKey: .storeNameBgColor) ?? "#FFFFFF"
         quoteSingleColumn = try c.decodeIfPresent(Bool.self, forKey: .quoteSingleColumn) ?? false
         quoteFooter = try c.decodeIfPresent(String.self, forKey: .quoteFooter) ?? "谢谢惠顾！欢迎下次光临"
+        showPromotion = try c.decodeIfPresent(Bool.self, forKey: .showPromotion) ?? true
     }
     
     func encode(to encoder: Encoder) throws {
@@ -124,6 +131,7 @@ struct StoreData: Codable {
         try c.encode(storeNameBgColor, forKey: .storeNameBgColor)
         try c.encode(quoteSingleColumn, forKey: .quoteSingleColumn)
         try c.encode(quoteFooter, forKey: .quoteFooter)
+        try c.encode(showPromotion, forKey: .showPromotion)
     }
 }
 
@@ -168,6 +176,7 @@ struct Product: Codable, Identifiable, Equatable {
     var isActive: Bool  // true=上架展示, false=下架隐藏
     var imageOffsetX: CGFloat  // 图片水平偏移（归一化 -1~1）
     var imageOffsetY: CGFloat  // 图片垂直偏移（归一化 -1~1）
+    var promotion: String  // 活动信息，非空时显示红色"活动"标签
     
     var image: UIImage? {
         if let data = imageData {
@@ -207,7 +216,7 @@ struct Product: Codable, Identifiable, Equatable {
         return current < orig
     }
     
-    init(id: UUID = UUID(), name: String, price: String, originalPrice: String = "", categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0) {
+    init(id: UUID = UUID(), name: String, price: String, originalPrice: String = "", categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0, promotion: String = "") {
         self.id = id
         self.name = name
         self.price = price
@@ -218,6 +227,7 @@ struct Product: Codable, Identifiable, Equatable {
         self.isActive = isActive
         self.imageOffsetX = imageOffsetX
         self.imageOffsetY = imageOffsetY
+        self.promotion = promotion
     }
     
     static func == (lhs: Product, rhs: Product) -> Bool {
@@ -226,7 +236,7 @@ struct Product: Codable, Identifiable, Equatable {
     
     // 自定义 Codable 兼容旧数据
     enum CodingKeys: String, CodingKey {
-        case id, name, price, originalPrice, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY
+        case id, name, price, originalPrice, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY, promotion
     }
     
     init(from decoder: Decoder) throws {
@@ -241,6 +251,7 @@ struct Product: Codable, Identifiable, Equatable {
         isActive = try c.decodeIfPresent(Bool.self, forKey: .isActive) ?? true
         imageOffsetX = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetX) ?? 0
         imageOffsetY = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetY) ?? 0
+        promotion = try c.decodeIfPresent(String.self, forKey: .promotion) ?? ""
     }
     
     func encode(to encoder: Encoder) throws {
@@ -255,6 +266,7 @@ struct Product: Codable, Identifiable, Equatable {
         try c.encode(isActive, forKey: .isActive)
         try c.encode(imageOffsetX, forKey: .imageOffsetX)
         try c.encode(imageOffsetY, forKey: .imageOffsetY)
+        try c.encode(promotion, forKey: .promotion)
     }
 }
 
