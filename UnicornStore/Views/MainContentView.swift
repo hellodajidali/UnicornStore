@@ -9,6 +9,7 @@ struct MainContentView: View {
     @State private var enlargedProduct: Product? = nil
     @State private var showQuoteAlert = false
     @State private var quoteAlertMessage = ""
+    @State private var quoteSaver: PhotoLibrarySaver? = nil
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
@@ -209,8 +210,10 @@ struct MainContentView: View {
             DispatchQueue.main.async {
                 self.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
                 self.showQuoteAlert = true
+                self.quoteSaver = nil  // 回调完成后释放 saver
             }
         }
+        quoteSaver = saver  // 保持引用，防止 saver 被提前释放导致回调 crash
         saver.save(image)
     }
 }
@@ -308,7 +311,7 @@ struct QuoteView: View {
                                     if product.hasValidOriginalPrice {
                                         Text(product.isPriceDown ? "降" : "涨")
                                             .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(product.isPriceDown ? Color(red: 0.85, green: 0.64, blue: 0.13) : .red)
+                                            .foregroundColor(product.isPriceDown ? .green : .red)
                                     }
                                 }
                             }

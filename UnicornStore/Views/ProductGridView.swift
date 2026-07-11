@@ -100,7 +100,7 @@ struct TextOnlyProductRow: View {
                 if product.hasValidOriginalPrice {
                     Text(product.isPriceDown ? "降" : "涨")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(product.isPriceDown ? Color(red: 0.85, green: 0.64, blue: 0.13) : .red)
+                        .foregroundColor(product.isPriceDown ? .green : .red)
                 }
             }
             
@@ -216,11 +216,11 @@ struct ProductCard: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.orange)
                         
-                        // 涨/降文字（金色=降，红色=涨）
+                        // 涨/降文字（绿色=降，红色=涨）
                         if product.hasValidOriginalPrice {
                             Text(product.isPriceDown ? "降" : "涨")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(product.isPriceDown ? Color(red: 0.85, green: 0.64, blue: 0.13) : .red)
+                                .foregroundColor(product.isPriceDown ? .green : .red)
                         }
                     }
                 }
