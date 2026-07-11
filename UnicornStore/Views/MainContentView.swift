@@ -169,22 +169,18 @@ struct MainContentView: View {
         )
         
         let controller = UIHostingController(rootView: quoteView)
-        guard let view = controller.view else {
+        guard let hostingView = controller.view else {
             quoteAlertMessage = "生成图片失败"
             showQuoteAlert = true
             return
         }
         
+        // 先计算实际尺寸
         let targetWidth: CGFloat = 390
-        let targetSize = CGSize(width: targetWidth, height: 0)
-        view.frame = CGRect(origin: .zero, size: targetSize)
-        view.backgroundColor = UIColor.white
+        hostingView.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 100)
+        hostingView.backgroundColor = UIColor.white
         
-        // 先布局一次获取实际高度
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        
-        let fittingSize = view.systemLayoutSizeFitting(
+        let fittingSize = hostingView.systemLayoutSizeFitting(
             CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height),
             withHorizontalFittingPriority: .required,
             verticalFittingPriority: .fittingSizeLevel
@@ -196,24 +192,33 @@ struct MainContentView: View {
             return
         }
         
-        view.frame = CGRect(origin: .zero, size: fittingSize)
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
+        // 把 controller 加到临时 window 层级，SwiftUI 渲染必须挂 window
+        let tempWindow = UIWindow(frame: CGRect(origin: .zero, size: fittingSize))
+        tempWindow.rootViewController = controller
+        tempWindow.isHidden = false
+        tempWindow.makeKey()
         
-        // 用 layer.render 代替 drawHierarchy，不需要在 window 层级中
+        hostingView.frame = CGRect(origin: .zero, size: fittingSize)
+        hostingView.setNeedsLayout()
+        hostingView.layoutIfNeeded()
+        
         let renderer = UIGraphicsImageRenderer(size: fittingSize)
         let image = renderer.image { ctx in
-            view.layer.render(in: ctx.cgContext)
+            hostingView.drawHierarchy(in: hostingView.bounds, afterScreenUpdates: true)
         }
+        
+        // 清理临时 window
+        tempWindow.resignKey()
+        tempWindow.isHidden = true
         
         let saver = PhotoLibrarySaver { success in
             DispatchQueue.main.async {
                 self.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
                 self.showQuoteAlert = true
-                self.quoteSaver = nil  // 回调完成后释放 saver
+                self.quoteSaver = nil
             }
         }
-        quoteSaver = saver  // 保持引用，防止 saver 被提前释放导致回调 crash
+        quoteSaver = saver
         saver.save(image)
     }
 }
