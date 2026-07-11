@@ -7,8 +7,8 @@ struct AddProductView: View {
     @Environment(\.presentationMode) var presentationMode
     
     @State private var name: String = ""
-    @State private var price: String = ""
-    @State private var originalPrice: String = ""
+    @State private var price: String = "¥"
+    @State private var originalPrice: String = "¥"
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
@@ -18,7 +18,7 @@ struct AddProductView: View {
     
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !price.trimmingCharacters(in: .whitespaces).isEmpty
+        price.trimmingCharacters(in: .whitespaces).count > 1
     }
     
     private var cardWidth: CGFloat {
@@ -201,7 +201,7 @@ struct EditProductView: View {
     let product: Product
     
     @State private var name: String = ""
-    @State private var price: String = ""
+    @State private var price: String = "¥"
     @State private var originalPrice: String = ""
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?

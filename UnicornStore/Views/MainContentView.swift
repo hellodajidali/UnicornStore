@@ -153,7 +153,6 @@ struct MainContentView: View {
     
     // MARK: - 生成报价单
     private func generateQuote() {
-        // 获取所有上架商品
         let activeProducts = dataStore.storeData.products.filter { $0.isActive }
         guard !activeProducts.isEmpty else {
             quoteAlertMessage = "暂无商品可生成报价单"
@@ -169,41 +168,50 @@ struct MainContentView: View {
         )
         
         let controller = UIHostingController(rootView: quoteView)
-        let view = controller.view!
-        
-        let targetWidth: CGFloat = 390
-        view.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 1000)
-        view.backgroundColor = .white
-        
-        // 布局计算实际高度
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        let actualSize = view.sizeThatFits(CGSize(width: targetWidth, height: CGFloat.greatestFiniteMagnitude))
-        view.frame = CGRect(origin: .zero, size: actualSize)
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        
-        let renderer = UIGraphicsImageRenderer(size: actualSize)
-        if let image = renderer.image(actions: { ctx in
-            view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
-        }).cgImage {
-            let uiImage = UIImage(cgImage: image)
-            // 保存到相册
-            let saver = PhotoLibrarySaver { success in
-                DispatchQueue.main.async {
-                    if success {
-                        self.quoteAlertMessage = "报价单已保存到相册 📄"
-                    } else {
-                        self.quoteAlertMessage = "保存失败，请检查相册权限"
-                    }
-                    self.showQuoteAlert = true
-                }
-            }
-            saver.save(uiImage)
-        } else {
+        guard let view = controller.view else {
             quoteAlertMessage = "生成图片失败"
             showQuoteAlert = true
+            return
         }
+        
+        let targetWidth: CGFloat = 390
+        let targetSize = CGSize(width: targetWidth, height: 0)
+        view.frame = CGRect(origin: .zero, size: targetSize)
+        view.backgroundColor = UIColor.white
+        
+        // 先布局一次获取实际高度
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        let fittingSize = view.systemLayoutSizeFitting(
+            CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height),
+            withHorizontalFittingPriority: .required,
+            verticalFittingPriority: .fittingSizeLevel
+        )
+        
+        guard fittingSize.width > 0, fittingSize.height > 0 else {
+            quoteAlertMessage = "生成图片失败：尺寸异常"
+            showQuoteAlert = true
+            return
+        }
+        
+        view.frame = CGRect(origin: .zero, size: fittingSize)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        // 用 layer.render 代替 drawHierarchy，不需要在 window 层级中
+        let renderer = UIGraphicsImageRenderer(size: fittingSize)
+        let image = renderer.image { ctx in
+            view.layer.render(in: ctx.cgContext)
+        }
+        
+        let saver = PhotoLibrarySaver { [weak self] success in
+            DispatchQueue.main.async {
+                self?.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
+                self?.showQuoteAlert = true
+            }
+        }
+        saver.save(image)
     }
 }
 
@@ -285,16 +293,22 @@ struct QuoteView: View {
                             Spacer()
                             
                             if showPrice {
-                                VStack(alignment: .trailing, spacing: 2) {
-                                    Text(product.price)
-                                        .font(.system(size: 15, weight: .bold))
-                                        .foregroundColor(.black)
-                                    
+                                HStack(spacing: 4) {
                                     if product.hasValidOriginalPrice {
                                         Text(product.originalPrice)
                                             .font(.system(size: 11))
                                             .foregroundColor(.gray)
                                             .strikethrough()
+                                    }
+                                    
+                                    Text(product.price)
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(.black)
+                                    
+                                    if product.hasValidOriginalPrice {
+                                        Text(product.isPriceDown ? "降" : "涨")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(product.isPriceDown ? Color(red: 0.85, green: 0.64, blue: 0.13) : .red)
                                     }
                                 }
                             }
