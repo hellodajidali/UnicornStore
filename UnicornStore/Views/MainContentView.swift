@@ -205,10 +205,10 @@ struct MainContentView: View {
             view.layer.render(in: ctx.cgContext)
         }
         
-        let saver = PhotoLibrarySaver { [weak self] success in
+        let saver = PhotoLibrarySaver { success in
             DispatchQueue.main.async {
-                self?.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
-                self?.showQuoteAlert = true
+                self.quoteAlertMessage = success ? "报价单已保存到相册 📄" : "保存失败，请检查相册权限"
+                self.showQuoteAlert = true
             }
         }
         saver.save(image)
