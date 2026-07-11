@@ -317,7 +317,7 @@ struct MainContentView: View {
                 let singleCol = dataStore.storeData.quoteSingleColumn
                 if singleCol {
                     for product in group.products {
-                        y = drawQuoteProduct(c: c, product: product, y: y, leftX: leftX, priceRightX: priceRightX, showP: showP)
+                        drawQuoteProduct(c: c, product: product, y: y, leftX: leftX, priceRightX: priceRightX, showP: showP)
                         y += 36
                     }
                 } else {
