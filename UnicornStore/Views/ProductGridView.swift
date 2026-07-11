@@ -74,21 +74,39 @@ struct TextOnlyProductRow: View {
     @EnvironmentObject var dataStore: DataStore
     
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             // 商品名（双击放大查看）
             Text(product.name)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.primary)
                 .lineLimit(2)
             
-            Spacer()
-            
-            // 价格（由 hidePrice 开关控制显隐）
+            // 价格（由 hidePrice 开关控制显隐，紧跟在名称右边）
             if dataStore.storeData.showPrice {
                 Text(product.price)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.orange)
+                
+                // 原价 + 涨跌指示（如有设置且不同）
+                if product.hasValidOriginalPrice {
+                    Text(product.originalPrice)
+                        .font(.system(size: 13))
+                        .foregroundColor(.gray)
+                        .strikethrough()
+                    
+                    if let pct = product.priceChangePercent {
+                        HStack(spacing: 2) {
+                            Image(systemName: product.isPriceDown ? "arrow.down" : "arrow.up")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(pct)
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .foregroundColor(product.isPriceDown ? .green : .red)
+                    }
+                }
             }
+            
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -185,10 +203,32 @@ struct ProductCard: View {
             
             // 价格（可隐藏）
             if dataStore.storeData.showPrice {
-                Text(product.price)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.orange)
-                    .padding(.bottom, 8)
+                VStack(spacing: 2) {
+                    Text(product.price)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.orange)
+                    
+                    // 原价 + 涨跌指示（如有设置且不同）
+                    if product.hasValidOriginalPrice {
+                        HStack(spacing: 4) {
+                            Text(product.originalPrice)
+                                .font(.system(size: 11))
+                                .foregroundColor(.gray)
+                                .strikethrough()
+                            
+                            if let pct = product.priceChangePercent {
+                                HStack(spacing: 1) {
+                                    Image(systemName: product.isPriceDown ? "arrow.down" : "arrow.up")
+                                        .font(.system(size: 8, weight: .bold))
+                                    Text(pct)
+                                        .font(.system(size: 9, weight: .bold))
+                                }
+                                .foregroundColor(product.isPriceDown ? .green : .red)
+                            }
+                        }
+                    }
+                }
+                .padding(.bottom, 8)
             } else {
                 // 即使没有价格也保持底部间距一致
                 Spacer().frame(height: 8)

@@ -7,6 +7,8 @@ struct MainContentView: View {
     @State private var selectedCategoryId: UUID?
     @State private var showAdmin = false
     @State private var enlargedProduct: Product? = nil
+    @State private var showQuoteAlert = false
+    @State private var quoteAlertMessage = ""
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
@@ -72,6 +74,9 @@ struct MainContentView: View {
                 AdminPanelView()
                     .environmentObject(dataStore)
             }
+            .alert(isPresented: $showQuoteAlert) {
+                Alert(title: Text("报价单"), message: Text(quoteAlertMessage), dismissButton: .default(Text("确定")))
+            }
             .onAppear {
                 if selectedCategoryId == nil {
                     selectedCategoryId = dataStore.storeData.categories.first?.id
@@ -114,6 +119,16 @@ struct MainContentView: View {
                     .cornerRadius(18)
             }
             
+            // 生成报价单
+            Button(action: generateQuote) {
+                Image(systemName: "doc.richtext")
+                    .font(.system(size: 16))
+                    .foregroundColor(themeColor)
+                    .frame(width: 36, height: 36)
+                    .background(themeColor.opacity(0.1))
+                    .cornerRadius(18)
+            }
+            
             Button(action: {
                 showAdmin = true
             }) {
@@ -134,6 +149,204 @@ struct MainContentView: View {
         .padding(.vertical, 10)
         .background(dataStore.storeData.storeNameBgColor.toColor())
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 2)
+    }
+    
+    // MARK: - 生成报价单
+    private func generateQuote() {
+        // 获取所有上架商品
+        let activeProducts = dataStore.storeData.products.filter { $0.isActive }
+        guard !activeProducts.isEmpty else {
+            quoteAlertMessage = "暂无商品可生成报价单"
+            showQuoteAlert = true
+            return
+        }
+        
+        let quoteView = QuoteView(
+            storeName: dataStore.storeData.storeName,
+            products: activeProducts,
+            categories: dataStore.storeData.categories,
+            showPrice: dataStore.storeData.showPrice
+        )
+        
+        let controller = UIHostingController(rootView: quoteView)
+        let view = controller.view!
+        
+        let targetWidth: CGFloat = 390
+        view.frame = CGRect(x: 0, y: 0, width: targetWidth, height: 1000)
+        view.backgroundColor = .white
+        
+        // 布局计算实际高度
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        let actualSize = view.sizeThatFits(CGSize(width: targetWidth, height: CGFloat.greatestFiniteMagnitude))
+        view.frame = CGRect(origin: .zero, size: actualSize)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        let renderer = UIGraphicsImageRenderer(size: actualSize)
+        if let image = renderer.image(actions: { ctx in
+            view.drawHierarchy(in: view.bounds, afterScreenUpdates: true)
+        }).cgImage {
+            let uiImage = UIImage(cgImage: image)
+            // 保存到相册
+            let saver = PhotoLibrarySaver { success in
+                DispatchQueue.main.async {
+                    if success {
+                        self.quoteAlertMessage = "报价单已保存到相册 📄"
+                    } else {
+                        self.quoteAlertMessage = "保存失败，请检查相册权限"
+                    }
+                    self.showQuoteAlert = true
+                }
+            }
+            saver.save(uiImage)
+        } else {
+            quoteAlertMessage = "生成图片失败"
+            showQuoteAlert = true
+        }
+    }
+}
+
+// MARK: - 报价单视图
+
+struct QuoteView: View {
+    let storeName: String
+    let products: [Product]
+    let categories: [Category]
+    let showPrice: Bool
+    
+    private var dateStr: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "zh_CN")
+        f.dateFormat = "yyyy年MM月dd日"
+        return f.string(from: Date())
+    }
+    
+    /// 按分类分组的商品
+    private var groupedProducts: [(category: Category, products: [Product])] {
+        let realCats = categories.filter { $0.name != "全部" }
+        var result: [(Category, [Product])] = []
+        for cat in realCats {
+            let catProducts = products.filter { $0.categoryId == cat.id }
+            if !catProducts.isEmpty {
+                result.append((cat, catProducts))
+            }
+        }
+        // 没有分类的商品放在"其他"里
+        let uncategorized = products.filter { p in !realCats.contains(where: { $0.id == p.categoryId }) }
+        if !uncategorized.isEmpty {
+            let otherCat = Category(name: "其他")
+            result.append((otherCat, uncategorized))
+        }
+        return result
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // 头部
+            VStack(spacing: 6) {
+                Text(storeName)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundColor(.black)
+                
+                Text(dateStr)
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray)
+                
+                Text("—— 报价单 ——")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray.opacity(0.7))
+                    .padding(.top, 2)
+            }
+            .padding(.top, 32)
+            .padding(.bottom, 16)
+            
+            Divider()
+                .padding(.horizontal, 20)
+            
+            // 商品列表
+            ForEach(Array(groupedProducts.enumerated()), id: \.offset) { sectionIndex, group in
+                VStack(alignment: .leading, spacing: 0) {
+                    // 分类标题
+                    Text(group.category.name)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
+                    
+                    // 该分类下的商品
+                    ForEach(Array(group.products.enumerated()), id: \.element.id) { index, product in
+                        HStack(alignment: .center) {
+                            Text(product.name)
+                                .font(.system(size: 15))
+                                .foregroundColor(.black)
+                            
+                            Spacer()
+                            
+                            if showPrice {
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(product.price)
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(.black)
+                                    
+                                    if product.hasValidOriginalPrice {
+                                        Text(product.originalPrice)
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.gray)
+                                            .strikethrough()
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 6)
+                        
+                        if index < group.products.count - 1 {
+                            Divider()
+                                .padding(.leading, 20)
+                        }
+                    }
+                }
+                
+                if sectionIndex < groupedProducts.count - 1 {
+                    Divider()
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 4)
+                }
+            }
+            
+            Divider()
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            
+            // 底部
+            Text("谢谢惠顾！欢迎下次光临")
+                .font(.system(size: 14))
+                .foregroundColor(.gray)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+        }
+        .frame(maxWidth: .infinity)
+        .background(Color.white)
+    }
+}
+
+// MARK: - 相册保存辅助
+
+class PhotoLibrarySaver: NSObject {
+    let callback: (Bool) -> Void
+    
+    init(callback: @escaping (Bool) -> Void) {
+        self.callback = callback
+    }
+    
+    func save(_ image: UIImage) {
+        UIImageWriteToSavedPhotosAlbum(image, self, #selector(didFinishSaving), nil)
+    }
+    
+    @objc func didFinishSaving(_ image: UIImage, didFinishSavingWithError error: Error?, contextInfo: UnsafeRawPointer) {
+        callback(error == nil)
     }
 }
 

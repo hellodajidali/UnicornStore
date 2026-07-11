@@ -148,6 +148,7 @@ struct Product: Codable, Identifiable, Equatable {
     var id: UUID
     var name: String
     var price: String
+    var originalPrice: String  // 原价（用于显示涨跌），空字符串表示未设置
     var categoryId: UUID?
     var imageData: Data?
     var description: String
@@ -162,10 +163,42 @@ struct Product: Codable, Identifiable, Equatable {
         return nil
     }
     
-    init(id: UUID = UUID(), name: String, price: String, categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0) {
+    /// 从价格字符串中提取数字（如 "¥99.00" → 99.0）
+    private var numericPrice: Double? {
+        let s = price.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+        return Double(s)
+    }
+    
+    private var numericOriginalPrice: Double? {
+        let s = originalPrice.replacingOccurrences(of: "[^0-9.]", with: "", options: .regularExpression)
+        return Double(s)
+    }
+    
+    /// 是否有有效原价且和现价不同
+    var hasValidOriginalPrice: Bool {
+        !originalPrice.isEmpty && originalPrice != price &&
+        numericPrice != nil && numericOriginalPrice != nil
+    }
+    
+    /// 价格变化百分比字符串（如 "-15%" 或 "+10%"）
+    var priceChangePercent: String? {
+        guard hasValidOriginalPrice, let current = numericPrice, let orig = numericOriginalPrice, orig != 0 else { return nil }
+        let diff = ((current - orig) / orig * 100).rounded()
+        if diff == 0 { return nil }
+        return diff > 0 ? "+\(Int(diff))%" : "\(Int(diff))%"
+    }
+    
+    /// 价格变化方向：true=降价, false=涨价
+    var isPriceDown: Bool {
+        guard hasValidOriginalPrice, let current = numericPrice, let orig = numericOriginalPrice else { return false }
+        return current < orig
+    }
+    
+    init(id: UUID = UUID(), name: String, price: String, originalPrice: String = "", categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0) {
         self.id = id
         self.name = name
         self.price = price
+        self.originalPrice = originalPrice
         self.categoryId = categoryId
         self.imageData = imageData
         self.description = description
@@ -180,7 +213,7 @@ struct Product: Codable, Identifiable, Equatable {
     
     // 自定义 Codable 兼容旧数据
     enum CodingKeys: String, CodingKey {
-        case id, name, price, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY
+        case id, name, price, originalPrice, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY
     }
     
     init(from decoder: Decoder) throws {
@@ -188,6 +221,7 @@ struct Product: Codable, Identifiable, Equatable {
         id = try c.decode(UUID.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
         price = try c.decode(String.self, forKey: .price)
+        originalPrice = try c.decodeIfPresent(String.self, forKey: .originalPrice) ?? ""
         categoryId = try c.decodeIfPresent(UUID.self, forKey: .categoryId)
         imageData = try c.decodeIfPresent(Data.self, forKey: .imageData)
         description = try c.decodeIfPresent(String.self, forKey: .description) ?? ""
@@ -201,6 +235,7 @@ struct Product: Codable, Identifiable, Equatable {
         try c.encode(id, forKey: .id)
         try c.encode(name, forKey: .name)
         try c.encode(price, forKey: .price)
+        try c.encode(originalPrice, forKey: .originalPrice)
         try c.encodeIfPresent(categoryId, forKey: .categoryId)
         try c.encodeIfPresent(imageData, forKey: .imageData)
         try c.encode(description, forKey: .description)

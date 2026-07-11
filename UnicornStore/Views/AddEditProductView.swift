@@ -8,6 +8,7 @@ struct AddProductView: View {
     
     @State private var name: String = ""
     @State private var price: String = ""
+    @State private var originalPrice: String = ""
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
@@ -85,6 +86,14 @@ struct AddProductView: View {
                     Text("价格")
                         .foregroundColor(.gray)
                     TextField("如: ¥99.00", text: $price)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .keyboardType(.decimalPad)
+                }
+                
+                HStack {
+                    Text("原价")
+                        .foregroundColor(.gray)
+                    TextField("如: ¥129.00（留空不显示）", text: $originalPrice)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                         .keyboardType(.decimalPad)
                 }
@@ -170,6 +179,7 @@ struct AddProductView: View {
         let product = Product(
             name: name.trimmingCharacters(in: .whitespaces),
             price: price.trimmingCharacters(in: .whitespaces),
+            originalPrice: originalPrice.trimmingCharacters(in: .whitespaces),
             categoryId: catId,
             imageData: imageData,
             description: description.trimmingCharacters(in: .whitespaces),
@@ -192,6 +202,7 @@ struct EditProductView: View {
     
     @State private var name: String = ""
     @State private var price: String = ""
+    @State private var originalPrice: String = ""
     @State private var description: String = ""
     @State private var selectedCategoryId: UUID?
     @State private var productImage: UIImage?
@@ -278,6 +289,14 @@ struct EditProductView: View {
                         .onChange(of: price) { _ in hasChanges = true }
                 }
                 
+                HStack {
+                    Text("原价")
+                        .foregroundColor(.gray)
+                    TextField("原价（留空不显示）", text: $originalPrice)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .onChange(of: originalPrice) { _ in hasChanges = true }
+                }
+                
                 VStack(alignment: .leading) {
                     Text("描述")
                         .foregroundColor(.gray)
@@ -350,6 +369,7 @@ struct EditProductView: View {
         
         name = product.name
         price = product.price
+        originalPrice = product.originalPrice
         description = product.description
         selectedCategoryId = product.categoryId ?? dataStore.storeData.categories.first?.id
         productImage = product.image
@@ -364,6 +384,7 @@ struct EditProductView: View {
             id: product.id,
             name: name.trimmingCharacters(in: .whitespaces),
             price: price.trimmingCharacters(in: .whitespaces),
+            originalPrice: originalPrice.trimmingCharacters(in: .whitespaces),
             categoryId: selectedCategoryId,
             imageData: imageData,
             description: description.trimmingCharacters(in: .whitespaces),
