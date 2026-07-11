@@ -207,12 +207,19 @@ struct MainContentView: View {
             
             // 活动标签
             if DataStore.shared.storeData.showPromotion && !product.promotion.isEmpty {
-                let promoAttr: [NSAttributedString.Key: Any] = [
+                let promoLabelAttr: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: 10),
                     .foregroundColor: UIColor.red
                 ]
-                let promoStr = "活动" as NSString
-                promoStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: promoAttr)
+                let promoLabel = "活动：" as NSString
+                promoLabel.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: promoLabelAttr)
+                cx += promoLabel.size(withAttributes: promoLabelAttr).width
+                
+                let promoContentAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 10),
+                    .foregroundColor: UIColor.black
+                ]
+                (product.promotion as NSString).draw(at: CGPoint(x: cx, y: y + 5), withAttributes: promoContentAttr)
             }
         } else {
             name.draw(at: CGPoint(x: leftX, y: y + 2), withAttributes: nameAttr)

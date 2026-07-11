@@ -104,9 +104,11 @@ struct TextOnlyProductRow: View {
                 }
                 // 活动标签
                 if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
-                    Text("活动")
-                        .font(.system(size: 13, weight: .bold))
+                    (Text("活动：")
                         .foregroundColor(.red)
+                    + Text(product.promotion)
+                        .foregroundColor(.primary))
+                        .font(.system(size: 13, weight: .bold))
                 }
             }
             
@@ -232,9 +234,15 @@ struct ProductCard: View {
                     
                     // 活动标签
                     if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
-                        Text("活动")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.red)
+                        HStack(spacing: 2) {
+                            Text("活动：")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.red)
+                            Text(product.promotion)
+                                .font(.system(size: 10))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                        }
                     }
                 }
                 .padding(.bottom, 8)
