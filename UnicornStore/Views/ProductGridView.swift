@@ -104,6 +104,9 @@ struct TextOnlyProductRow: View {
                 }
                 // 活动标签
                 if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
+                    Text("·")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 14, weight: .bold))
                     (Text("活动：")
                         .foregroundColor(.red)
                     + Text(product.promotion)
@@ -234,6 +237,9 @@ struct ProductCard: View {
                     
                     // 活动标签
                     if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
+                        Text("·")
+                            .foregroundColor(.gray)
+                            .font(.system(size: 12))
                         HStack(spacing: 2) {
                             Text("活动：")
                                 .font(.system(size: 10, weight: .bold))

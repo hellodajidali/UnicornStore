@@ -187,7 +187,7 @@ struct MainContentView: View {
             // 现价
             let priceAttr: [NSAttributedString.Key: Any] = [
                 .font: UIFont.boldSystemFont(ofSize: 15),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.orange
             ]
             let priceStr = product.price as NSString
             priceStr.draw(at: CGPoint(x: cx, y: y + 2), withAttributes: priceAttr)
@@ -207,6 +207,15 @@ struct MainContentView: View {
             
             // 活动标签
             if DataStore.shared.storeData.showPromotion && !product.promotion.isEmpty {
+                // 分隔符 ·
+                let sepAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 10),
+                    .foregroundColor: UIColor.lightGray
+                ]
+                let sepStr = "·" as NSString
+                sepStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: sepAttr)
+                cx += sepStr.size(withAttributes: sepAttr).width + 6
+                
                 let promoLabelAttr: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: 10),
                     .foregroundColor: UIColor.red
