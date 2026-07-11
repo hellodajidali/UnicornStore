@@ -1,5 +1,4 @@
 import SwiftUI
-import Photos
 
 // MARK: - 主界面
 
@@ -10,6 +9,8 @@ struct MainContentView: View {
     @State private var enlargedProduct: Product? = nil
     @State private var showQuoteAlert = false
     @State private var quoteAlertMessage = ""
+    @State private var showShareSheet = false
+    @State private var shareImageURL: URL?
     
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
@@ -77,6 +78,11 @@ struct MainContentView: View {
             }
             .alert(isPresented: $showQuoteAlert) {
                 Alert(title: Text("报价单"), message: Text(quoteAlertMessage), dismissButton: .default(Text("确定")))
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = shareImageURL {
+                    ShareSheet(activityItems: [url])
+                }
             }
             .onAppear {
                 if selectedCategoryId == nil {
@@ -353,32 +359,33 @@ struct MainContentView: View {
             )
         }
         
-        // 用 PHPhotoLibrary 保存（现代 API，不涉及 Objective-C selector 回调）
-        PHPhotoLibrary.requestAuthorization { [self] status in
-            guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
-                    self.quoteAlertMessage = "需要相册权限才能保存报价单"
-                    self.showQuoteAlert = true
-                }
-                return
-            }
-            
-            PHPhotoLibrary.shared().performChanges {
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            } completionHandler: { success, error in
-                DispatchQueue.main.async {
-                    if success {
-                        self.quoteAlertMessage = "报价单已保存到相册 📄"
-                    } else if let err = error {
-                        self.quoteAlertMessage = "保存失败：\(err.localizedDescription)"
-                    } else {
-                        self.quoteAlertMessage = "保存失败，请重试"
-                    }
-                    self.showQuoteAlert = true
-                }
-            }
+        // 保存到临时文件并弹出分享
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "报价单_\(Int(Date().timeIntervalSince1970)).png"
+        let fileURL = tempDir.appendingPathComponent(fileName)
+        
+        do {
+            try image.pngData()?.write(to: fileURL)
+            shareImageURL = fileURL
+            showShareSheet = true
+        } catch {
+            quoteAlertMessage = "保存失败：\(error.localizedDescription)"
+            showQuoteAlert = true
         }
     }
+}
+
+// MARK: - 分享面板（UIActivityViewController Bridge）
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let applicationActivities: [UIActivity]? = nil
+    
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+    }
+    
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - 毛玻璃背景（iOS 14+ 兼容）
