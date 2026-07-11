@@ -139,6 +139,18 @@ struct AdminPanelView: View {
                         .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
                     .padding(.vertical, 4)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("公告（显示在报价单日期下方）：")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                        TextField("输入公告内容", text: Binding(
+                            get: { dataStore.storeData.quoteAnnouncement },
+                            set: { dataStore.storeData.quoteAnnouncement = $0 }
+                        ))
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    }
+                    .padding(.vertical, 4)
                 }
                 
                 // 数据管理

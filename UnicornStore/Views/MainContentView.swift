@@ -266,10 +266,14 @@ struct MainContentView: View {
         let priceRightX = pageWidth - margin
         
         // 计算总高度
-        var totalHeight: CGFloat = 60  // 顶部内边距
-        totalHeight += 50  // 店名
-        totalHeight += 30  // 日期
-        totalHeight += 20  // 分隔线
+        let hasAnn = !dataStore.storeData.quoteAnnouncement.isEmpty
+        var totalHeight: CGFloat = 32  // 顶部内边距（缩小）
+        totalHeight += 40  // 店名
+        totalHeight += 24  // 日期
+        totalHeight += 16  // 分隔线
+        if hasAnn {
+            totalHeight += 40  // 公告文字
+        }
         totalHeight += 8   // 间距
         for group in groups {
             totalHeight += 40  // 分类标题
@@ -296,7 +300,7 @@ struct MainContentView: View {
             c.setFillColor(UIColor.white.cgColor)
             c.fill(CGRect(x: 0, y: 0, width: pageWidth, height: totalHeight))
             
-            var y: CGFloat = 60
+            var y: CGFloat = 32
             
             // —— 店名 ——
             let titleAttr: [NSAttributedString.Key: Any] = [
@@ -308,7 +312,7 @@ struct MainContentView: View {
                 at: CGPoint(x: (pageWidth - titleSize.width) / 2, y: y),
                 withAttributes: titleAttr
             )
-            y += 40
+            y += 36
             
             // —— 日期 ——
             let dateAttr: [NSAttributedString.Key: Any] = [
@@ -320,7 +324,7 @@ struct MainContentView: View {
                 at: CGPoint(x: (pageWidth - dateSize.width) / 2, y: y),
                 withAttributes: dateAttr
             )
-            y += 24
+            y += 22
             
             // —— 分隔线 ——
             c.setStrokeColor(UIColor.lightGray.withAlphaComponent(0.5).cgColor)
@@ -328,7 +332,30 @@ struct MainContentView: View {
             c.move(to: CGPoint(x: margin, y: y))
             c.addLine(to: CGPoint(x: pageWidth - margin, y: y))
             c.strokePath()
-            y += 20
+            y += 16
+            
+            // —— 公告 ——
+            let annText = dataStore.storeData.quoteAnnouncement
+            if !annText.isEmpty {
+                let annAttr: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 12),
+                    .foregroundColor: UIColor.darkGray
+                ]
+                let annSize = (annText as NSString).size(withAttributes: annAttr)
+                // 自动换行，限制宽度
+                let maxW = pageWidth - margin * 2
+                let rect = (annText as NSString).boundingRect(
+                    with: CGSize(width: maxW, height: .greatestFiniteMagnitude),
+                    options: .usesLineFragmentOrigin,
+                    attributes: annAttr, context: nil
+                )
+                (annText as NSString).draw(
+                    with: CGRect(x: margin, y: y, width: maxW, height: rect.height),
+                    options: .usesLineFragmentOrigin,
+                    attributes: annAttr, context: nil
+                )
+                y += rect.height + 12
+            }
             
             for groupIdx in 0..<groups.count {
                 let group = groups[groupIdx]

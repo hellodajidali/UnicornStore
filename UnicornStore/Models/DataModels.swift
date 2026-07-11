@@ -34,6 +34,7 @@ struct StoreData: Codable {
     // 报价单设置
     var quoteSingleColumn: Bool  // true=单排显示，false=双排
     var quoteFooter: String      // 底部文字
+    var quoteAnnouncement: String  // 报价单公告
     
     // 活动设置
     var showPromotion: Bool  // true=显示活动标签
@@ -62,6 +63,7 @@ struct StoreData: Codable {
             storeNameBgColor: "#FFFFFF",
             quoteSingleColumn: false,
             quoteFooter: "谢谢惠顾！欢迎下次光临",
+            quoteAnnouncement: "",
             showPromotion: true
         )
     }
@@ -70,7 +72,7 @@ struct StoreData: Codable {
     enum CodingKeys: String, CodingKey {
         case storeName, storeNameFontSize, storeNameColor, announcement
         case categories, products, gridColumns, showPrice, showTextOnly, themeColor
-        case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter, showPromotion
+        case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter, quoteAnnouncement, showPromotion
     }
     
     init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
@@ -78,6 +80,7 @@ struct StoreData: Codable {
          gridColumns: Int, showPrice: Bool, showTextOnly: Bool = false, themeColor: String,
          announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF",
          quoteSingleColumn: Bool = false, quoteFooter: String = "谢谢惠顾！欢迎下次光临",
+         quoteAnnouncement: String = "",
          showPromotion: Bool = true) {
         self.storeName = storeName
         self.storeNameFontSize = storeNameFontSize
@@ -93,6 +96,7 @@ struct StoreData: Codable {
         self.storeNameBgColor = storeNameBgColor
         self.quoteSingleColumn = quoteSingleColumn
         self.quoteFooter = quoteFooter
+        self.quoteAnnouncement = quoteAnnouncement
         self.showPromotion = showPromotion
     }
     
@@ -112,6 +116,7 @@ struct StoreData: Codable {
         storeNameBgColor = try c.decodeIfPresent(String.self, forKey: .storeNameBgColor) ?? "#FFFFFF"
         quoteSingleColumn = try c.decodeIfPresent(Bool.self, forKey: .quoteSingleColumn) ?? false
         quoteFooter = try c.decodeIfPresent(String.self, forKey: .quoteFooter) ?? "谢谢惠顾！欢迎下次光临"
+        quoteAnnouncement = try c.decodeIfPresent(String.self, forKey: .quoteAnnouncement) ?? ""
         showPromotion = try c.decodeIfPresent(Bool.self, forKey: .showPromotion) ?? true
     }
     
@@ -131,6 +136,7 @@ struct StoreData: Codable {
         try c.encode(storeNameBgColor, forKey: .storeNameBgColor)
         try c.encode(quoteSingleColumn, forKey: .quoteSingleColumn)
         try c.encode(quoteFooter, forKey: .quoteFooter)
+        try c.encode(quoteAnnouncement, forKey: .quoteAnnouncement)
         try c.encode(showPromotion, forKey: .showPromotion)
     }
 }
