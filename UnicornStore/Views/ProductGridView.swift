@@ -36,6 +36,9 @@ struct ProductGridView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 60)
+            } else if dataStore.storeData.showTextOnly {
+                // 纯文字显示模式
+                textOnlyListView
             } else {
                 LazyVGrid(columns: gridItems, spacing: 12) {
                     ForEach(products) { product in
@@ -44,6 +47,62 @@ struct ProductGridView: View {
                 }
             }
         }
+    }
+    
+    // MARK: - 纯文字显示列表
+    private var textOnlyListView: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(products.enumerated()), id: \.element.id) { index, product in
+                TextOnlyProductRow(product: product, onEnlarge: onEnlarge)
+                
+                if index < products.count - 1 {
+                    Divider()
+                        .padding(.leading, 16)
+                }
+            }
+        }
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
+    }
+}
+
+// MARK: - 纯文字商品行
+
+struct TextOnlyProductRow: View {
+    let product: Product
+    let onEnlarge: ((Product) -> Void)?
+    @EnvironmentObject var dataStore: DataStore
+    
+    var body: some View {
+        HStack {
+            // 商品名（双击放大查看）
+            Text(product.name)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+            
+            Spacer()
+            
+            // 价格（由 hidePrice 开关控制显隐）
+            if dataStore.storeData.showPrice {
+                Text(product.price)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.orange)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+        .gesture(
+            TapGesture(count: 2)
+                .onEnded {
+                    onEnlarge?(product)
+                }
+                .simultaneously(with: TapGesture(count: 1)
+                    .onEnded {
+                        // 单击不做特殊动作，但保留手势槽位避免和双击冲突
+                    })
+        )
     }
 }
 

@@ -22,6 +22,7 @@ struct StoreData: Codable {
     // 布局
     var gridColumns: Int
     var showPrice: Bool
+    var showTextOnly: Bool  // true=纯文字显示模式（只显示商品名和价格）
     
     // 整体主题色
     var themeColor: String  // hex颜色
@@ -48,6 +49,7 @@ struct StoreData: Codable {
             ],
             gridColumns: 3,
             showPrice: true,
+            showTextOnly: false,
             themeColor: "#9966CC",
             announcementBgColor: "#F0F0F0",
             storeNameBgColor: "#FFFFFF"
@@ -57,13 +59,13 @@ struct StoreData: Codable {
     // 自定义 Codable 兼容旧数据（新加的字段如果没有就使用默认值）
     enum CodingKeys: String, CodingKey {
         case storeName, storeNameFontSize, storeNameColor, announcement
-        case categories, products, gridColumns, showPrice, themeColor
+        case categories, products, gridColumns, showPrice, showTextOnly, themeColor
         case announcementBgColor, storeNameBgColor
     }
     
     init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
          announcement: Announcement, categories: [Category], products: [Product],
-         gridColumns: Int, showPrice: Bool, themeColor: String,
+         gridColumns: Int, showPrice: Bool, showTextOnly: Bool = false, themeColor: String,
          announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF") {
         self.storeName = storeName
         self.storeNameFontSize = storeNameFontSize
@@ -73,6 +75,7 @@ struct StoreData: Codable {
         self.products = products
         self.gridColumns = gridColumns
         self.showPrice = showPrice
+        self.showTextOnly = showTextOnly
         self.themeColor = themeColor
         self.announcementBgColor = announcementBgColor
         self.storeNameBgColor = storeNameBgColor
@@ -88,6 +91,7 @@ struct StoreData: Codable {
         products = try c.decode([Product].self, forKey: .products)
         gridColumns = try c.decode(Int.self, forKey: .gridColumns)
         showPrice = try c.decode(Bool.self, forKey: .showPrice)
+        showTextOnly = try c.decodeIfPresent(Bool.self, forKey: .showTextOnly) ?? false
         themeColor = try c.decode(String.self, forKey: .themeColor)
         announcementBgColor = try c.decodeIfPresent(String.self, forKey: .announcementBgColor) ?? "#F0F0F0"
         storeNameBgColor = try c.decodeIfPresent(String.self, forKey: .storeNameBgColor) ?? "#FFFFFF"
@@ -103,6 +107,7 @@ struct StoreData: Codable {
         try c.encode(products, forKey: .products)
         try c.encode(gridColumns, forKey: .gridColumns)
         try c.encode(showPrice, forKey: .showPrice)
+        try c.encode(showTextOnly, forKey: .showTextOnly)
         try c.encode(themeColor, forKey: .themeColor)
         try c.encode(announcementBgColor, forKey: .announcementBgColor)
         try c.encode(storeNameBgColor, forKey: .storeNameBgColor)

@@ -102,6 +102,18 @@ struct MainContentView: View {
                     .cornerRadius(18)
             }
             
+            // 纯文字显示模式开关
+            Button(action: {
+                dataStore.storeData.showTextOnly.toggle()
+            }) {
+                Image(systemName: dataStore.storeData.showTextOnly ? "doc.text.fill" : "text.alignleft")
+                    .font(.system(size: 16))
+                    .foregroundColor(dataStore.storeData.showTextOnly ? themeColor : .gray)
+                    .frame(width: 36, height: 36)
+                    .background(themeColor.opacity(0.1))
+                    .cornerRadius(18)
+            }
+            
             Button(action: {
                 showAdmin = true
             }) {
