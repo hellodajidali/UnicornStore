@@ -19,11 +19,9 @@ struct AddProductView: View {
     
     // 文字标
     @State private var textBadge: String = ""
-    @State private var textBadgeColor: String = "#FF4500"
     
     // 热度标
     @State private var hotBadge: String = ""
-    @State private var hotBadgeColor: String = "#FF4500"
     
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
@@ -169,27 +167,8 @@ struct AddProductView: View {
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .onChange(of: textBadge) { newValue in
-                        // 选中选项时自动设置颜色
-                        if let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
-                            textBadgeColor = option.color
-                        }
-                    }
                 }
                 
-                if !textBadge.isEmpty {
-                    HStack {
-                        Text("颜色：")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Spacer()
-                        ColorPicker("", selection: Binding(
-                            get: { textBadgeColor.toColor() },
-                            set: { textBadgeColor = $0.toHex() }
-                        ))
-                        .labelsHidden()
-                    }
-                }
             }
             
             // 热度标设置
@@ -206,27 +185,8 @@ struct AddProductView: View {
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .onChange(of: hotBadge) { newValue in
-                        // 选中选项时自动设置颜色
-                        if let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
-                            hotBadgeColor = option.color
-                        }
-                    }
                 }
                 
-                if !hotBadge.isEmpty {
-                    HStack {
-                        Text("颜色：")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Spacer()
-                        ColorPicker("", selection: Binding(
-                            get: { hotBadgeColor.toColor() },
-                            set: { hotBadgeColor = $0.toHex() }
-                        ))
-                        .labelsHidden()
-                    }
-                }
             }
             
             Section {
@@ -267,9 +227,8 @@ struct AddProductView: View {
             imageOffsetY: imageOffsetY,
             promotion: promotion.trimmingCharacters(in: .whitespaces),
             textBadge: textBadge,
-            textBadgeColor: textBadgeColor,
-            hotBadge: hotBadge,
-            hotBadgeColor: hotBadgeColor
+            textBadgeColor: dataStore.storeData.textBadgeOptions.first(where: { $0.name == textBadge })?.color ?? "#FF4500",
+            hotBadgeColor: dataStore.storeData.hotBadgeOptions.first(where: { $0.name == hotBadge })?.color ?? "#FF4500"
         )
         
         dataStore.addProduct(product)
@@ -300,11 +259,9 @@ struct EditProductView: View {
     
     // 文字标
     @State private var textBadge: String = ""
-    @State private var textBadgeColor: String = "#FF4500"
     
     // 热度标
     @State private var hotBadge: String = ""
-    @State private var hotBadgeColor: String = "#FF4500"
     
     private var cardWidth: CGFloat {
         let screenWidth = UIScreen.main.bounds.width - 24
@@ -444,32 +401,8 @@ struct EditProductView: View {
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .onChange(of: textBadge) { newValue in
-                        hasChanges = true
-                        // 只在用户主动切换标签时自动填充选项默认色（排除初始加载）
-                        if newValue != product.textBadge,
-                           let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
-                            textBadgeColor = option.color
-                        }
-                    }
                 }
                 
-                if !textBadge.isEmpty {
-                    HStack {
-                        Text("颜色：")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Spacer()
-                        ColorPicker("", selection: Binding(
-                            get: { textBadgeColor.toColor() },
-                            set: {
-                                textBadgeColor = $0.toHex()
-                                hasChanges = true
-                            }
-                        ))
-                        .labelsHidden()
-                    }
-                }
             }
             
             // 热度标设置
@@ -486,32 +419,8 @@ struct EditProductView: View {
                         }
                     }
                     .pickerStyle(MenuPickerStyle())
-                    .onChange(of: hotBadge) { newValue in
-                        hasChanges = true
-                        // 只在用户主动切换标签时自动填充选项默认色
-                        if newValue != product.hotBadge,
-                           let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
-                            hotBadgeColor = option.color
-                        }
-                    }
                 }
                 
-                if !hotBadge.isEmpty {
-                    HStack {
-                        Text("颜色：")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                        Spacer()
-                        ColorPicker("", selection: Binding(
-                            get: { hotBadgeColor.toColor() },
-                            set: {
-                                hotBadgeColor = $0.toHex()
-                                hasChanges = true
-                            }
-                        ))
-                        .labelsHidden()
-                    }
-                }
             }
             
             Section {
@@ -552,13 +461,14 @@ struct EditProductView: View {
         imageOffsetX = product.imageOffsetX
         imageOffsetY = product.imageOffsetY
         textBadge = product.textBadge
-        textBadgeColor = product.textBadgeColor
         hotBadge = product.hotBadge
-        hotBadgeColor = product.hotBadgeColor
     }
     
     private func saveChanges() {
         let imageData = productImage?.jpegData(compressionQuality: 0.8)
+        
+        let badgeTextColor = dataStore.storeData.textBadgeOptions.first(where: { $0.name == textBadge })?.color ?? "#FF4500"
+        let badgeHotColor = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == hotBadge })?.color ?? "#FF4500"
         
         let updated = Product(
             id: product.id,
@@ -572,9 +482,9 @@ struct EditProductView: View {
             imageOffsetY: imageOffsetY,
             promotion: promotion.trimmingCharacters(in: .whitespaces),
             textBadge: textBadge,
-            textBadgeColor: textBadgeColor,
+            textBadgeColor: badgeTextColor,
             hotBadge: hotBadge,
-            hotBadgeColor: hotBadgeColor
+            hotBadgeColor: badgeHotColor
         )
         
         dataStore.updateProduct(updated)
