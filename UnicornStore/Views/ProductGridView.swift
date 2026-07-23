@@ -66,6 +66,42 @@ struct ProductGridView: View {
     }
 }
 
+// MARK: - 标签视图组件
+
+/// 文字标（带框）
+struct TextBadgeView: View {
+    let text: String
+    let color: Color
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(color)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(color, lineWidth: 1)
+            )
+    }
+}
+
+/// 热度标（无框）
+struct HotBadgeView: View {
+    let text: String
+    let color: Color
+    
+    var body: some View {
+        Text(text)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(color)
+    }
+}
+
 // MARK: - 纯文字商品行
 
 struct TextOnlyProductRow: View {
@@ -75,13 +111,24 @@ struct TextOnlyProductRow: View {
     
     var body: some View {
         HStack(spacing: 8) {
+            // 文字标（带框，在商品名前）
+            if !product.textBadge.isEmpty {
+                TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+            }
+            
             // 商品名（双击放大查看）
             Text(product.name)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.primary)
                 .lineLimit(2)
             
-            // 价格（由 hidePrice 开关控制显隐，紧跟在名称右边）
+            // 热度标（在商品名和原价中间）
+            if !product.hotBadge.isEmpty && dataStore.storeData.showPrice {
+                HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
+                    .padding(.leading, 2)
+            }
+            
+            // 价格（由 hidePrice 开关控制显隐）
             if dataStore.storeData.showPrice {
                 // 原价（如有，灰色删除线）
                 if product.hasValidOriginalPrice {
@@ -200,20 +247,30 @@ struct ProductCard: View {
                         })
             )
             
-            // 商品名称
-            Text(product.name)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.primary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 6)
-                .padding(.top, 6)
+            // 商品名称（前面加文字标）
+            HStack(spacing: 4) {
+                if !product.textBadge.isEmpty {
+                    TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+                }
+                Text(product.name)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.horizontal, 6)
+            .padding(.top, 6)
             
             // 价格（可隐藏）
             if dataStore.storeData.showPrice {
                 VStack(spacing: 2) {
                     HStack(spacing: 4) {
+                        // 热度标（在原价前方）
+                        if !product.hotBadge.isEmpty {
+                            HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
+                        }
+                        
                         // 原价（如有，灰色删除线）
                         if product.hasValidOriginalPrice {
                             Text(product.originalPrice)

@@ -42,10 +42,7 @@ struct AnnouncementEditView: View {
     @State private var announcementText: String = ""
     @State private var fontSize: CGFloat = 14
     @State private var textColor: String = "#663399"
-    @State private var showColorPicker = false
     @State private var announcementBgColor: String = "#F0F0F0"
-    
-    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
     
     var body: some View {
         Section(header: Text("公告栏").font(.headline)) {
@@ -74,50 +71,30 @@ struct AnnouncementEditView: View {
                     Slider(value: $fontSize, in: 10...28, step: 1)
                 }
                 
-                // 字体颜色
-                VStack(alignment: .leading, spacing: 4) {
+                // 字体颜色（系统调色板）
+                HStack {
                     Text("字体颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    HStack(spacing: 8) {
-                        ForEach(presetColors, id: \.self) { color in
-                            Circle()
-                                .fill(color.toColor())
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Circle()
-                                        .stroke(textColor == color ? Color.primary : Color.clear, lineWidth: 2)
-                                )
-                                .onTapGesture {
-                                    textColor = color
-                                }
-                        }
-                    }
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { textColor.toColor() },
+                        set: { textColor = $0.toHex() }
+                    ))
+                    .labelsHidden()
                 }
                 
-                // 背景颜色切换（和字体颜色相同色板 + 白色+灰色）
-                VStack(alignment: .leading, spacing: 6) {
+                // 背景颜色（系统调色板）
+                HStack {
                     Text("背景颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
-                        ForEach(presetColors + ["#FFFFFF", "#F0F0F0"], id: \.self) { color in
-                            Circle()
-                                .fill(color.toColor())
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    Circle()
-                                        .stroke(announcementBgColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(color == "#FFFFFF" ? Color.gray.opacity(0.3) : Color.clear, lineWidth: 1)
-                                )
-                                .onTapGesture {
-                                    announcementBgColor = color
-                                }
-                        }
-                    }
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { announcementBgColor.toColor() },
+                        set: { announcementBgColor = $0.toHex() }
+                    ))
+                    .labelsHidden()
                 }
             }
             .padding(.vertical, 4)

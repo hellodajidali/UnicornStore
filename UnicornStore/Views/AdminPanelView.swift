@@ -153,6 +153,12 @@ struct AdminPanelView: View {
                     .padding(.vertical, 4)
                 }
                 
+                // 标签管理（文字标 + 热度标）
+                Section(header: Text("标签管理").font(.headline)) {
+                    TextBadgeOptionsEditView()
+                    HotBadgeOptionsEditView()
+                }
+                
                 // 数据管理
                 Section(header: Text("数据管理").font(.headline)) {
                     Button(action: exportBackup) {
@@ -268,8 +274,6 @@ struct StoreNameEditView: View {
     @State private var textColor: String = "#9966CC"
     @State private var nameBgColor: String = "#FFFFFF"
     
-    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#333333", "#000000"]
-    
     var body: some View {
         Section(header: Text("商店名称").font(.headline)) {
             VStack(alignment: .leading, spacing: 10) {
@@ -294,50 +298,30 @@ struct StoreNameEditView: View {
                     Slider(value: $fontSize, in: 16...40, step: 1)
                 }
                 
-                // 字体颜色
-                VStack(alignment: .leading, spacing: 4) {
+                // 字体颜色（系统调色板）
+                HStack {
                     Text("字体颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
-                        ForEach(presetColors, id: \.self) { color in
-                            Circle()
-                                .fill(color.toColor())
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    Circle()
-                                        .stroke(textColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                                )
-                                .onTapGesture {
-                                    textColor = color
-                                }
-                        }
-                    }
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { textColor.toColor() },
+                        set: { textColor = $0.toHex() }
+                    ))
+                    .labelsHidden()
                 }
                 
-                // 背景颜色切换（和字体颜色相同色板 + 白色+灰色）
-                VStack(alignment: .leading, spacing: 6) {
+                // 背景颜色（系统调色板）
+                HStack {
                     Text("顶栏背景颜色：")
                         .font(.caption)
                         .foregroundColor(.gray)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
-                        ForEach(presetColors + ["#FFFFFF", "#F0F0F0"], id: \.self) { color in
-                            Circle()
-                                .fill(color.toColor())
-                                .frame(width: 32, height: 32)
-                                .overlay(
-                                    Circle()
-                                        .stroke(nameBgColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(color == "#FFFFFF" ? Color.gray.opacity(0.3) : Color.clear, lineWidth: 1)
-                                )
-                                .onTapGesture {
-                                    nameBgColor = color
-                                }
-                        }
-                    }
+                    Spacer()
+                    ColorPicker("", selection: Binding(
+                        get: { nameBgColor.toColor() },
+                        set: { nameBgColor = $0.toHex() }
+                    ))
+                    .labelsHidden()
                 }
                 
                 // 预览
@@ -370,32 +354,24 @@ struct ThemeColorEditView: View {
     @EnvironmentObject var dataStore: DataStore
     @State private var themeColor: String = "#9966CC"
     
-    private let presetColors = ["#9966CC", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#E74C3C", "#2ECC71", "#3498DB", "#9B59B6", "#1ABC9C", "#F39C12", "#FFFFFF", "#808080", "#E0E0E0"]
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("整体主题颜色：")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 10) {
-                ForEach(presetColors, id: \.self) { color in
-                    Circle()
-                        .fill(color.toColor())
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Circle()
-                                .stroke(themeColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                        )
-                        .shadow(color: color.toColor().opacity(0.3), radius: themeColor == color ? 6 : 0)
-                        .onTapGesture {
-                            themeColor = color
-                            dataStore.storeData.themeColor = color
-                        }
-                }
+            HStack {
+                Text("整体主题颜色：")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                Spacer()
+                ColorPicker("", selection: Binding(
+                    get: { themeColor.toColor() },
+                    set: {
+                        themeColor = $0.toHex()
+                        dataStore.storeData.themeColor = themeColor
+                    }
+                ))
+                .labelsHidden()
             }
-            .padding(.vertical, 4)
             
+            // 当前主题色预览
             Text("当前主题色预览")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(themeColor == "#FFFFFF" || themeColor == "#FFEAA7" ? .black : .white)
@@ -411,6 +387,296 @@ struct ThemeColorEditView: View {
         .padding(.vertical, 4)
         .onAppear {
             themeColor = dataStore.storeData.themeColor
+        }
+    }
+}
+
+// MARK: - 文字标选项管理
+
+struct TextBadgeOptionsEditView: View {
+    @EnvironmentObject var dataStore: DataStore
+    @State private var newBadgeName: String = ""
+    @State private var newBadgeColor: String = "#FF4500"
+    @State private var editingBadge: BadgeOption? = nil
+    @State private var editName: String = ""
+    @State private var editColor: String = "#FF4500"
+    @State private var showEditSheet = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("文字标选项（商品名前带框标签）：")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            // 现有选项列表
+            let options = dataStore.storeData.textBadgeOptions
+            if options.isEmpty {
+                Text("暂无文字标选项，请在下方添加")
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.7))
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(options) { option in
+                    HStack {
+                        Text(option.name)
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Circle()
+                            .fill(option.color.toColor())
+                            .frame(width: 20, height: 20)
+                        
+                        Button(action: {
+                            editingBadge = option
+                            editName = option.name
+                            editColor = option.color
+                            showEditSheet = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        .padding(.leading, 8)
+                        
+                        Button(action: {
+                            dataStore.deleteTextBadgeOption(option)
+                        }) {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            
+            // 添加新选项
+            HStack(spacing: 8) {
+                TextField("标签文字", text: $newBadgeName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(maxWidth: .infinity)
+                
+                ColorPicker("", selection: Binding(
+                    get: { newBadgeColor.toColor() },
+                    set: { newBadgeColor = $0.toHex() }
+                ))
+                .labelsHidden()
+                .frame(width: 40)
+                
+                Button(action: {
+                    let trimmed = newBadgeName.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty {
+                        dataStore.addTextBadgeOption(trimmed, color: newBadgeColor)
+                        newBadgeName = ""
+                        newBadgeColor = "#FF4500"
+                    }
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.green)
+                }
+                .disabled(newBadgeName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(.vertical, 4)
+        // 编辑弹窗
+        .sheet(isPresented: $showEditSheet) {
+            NavigationView {
+                VStack(spacing: 20) {
+                    Text("编辑文字标")
+                        .font(.headline)
+                        .padding(.top)
+                    
+                    TextField("标签文字", text: $editName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                    
+                    HStack {
+                        Text("颜色：")
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("选择颜色", selection: Binding(
+                            get: { editColor.toColor() },
+                            set: { editColor = $0.toHex() }
+                        ))
+                        .labelsHidden()
+                    }
+                    .padding(.horizontal)
+                    
+                    // 预览
+                    HStack(spacing: 6) {
+                        Text("预览：")
+                            .foregroundColor(.gray)
+                        TextBadgeView(text: editName.isEmpty ? "标签" : editName, color: editColor.toColor())
+                    }
+                    
+                    Spacer()
+                }
+                .navigationBarItems(
+                    leading: Button("取消") {
+                        showEditSheet = false
+                    },
+                    trailing: Button("保存") {
+                        if let badge = editingBadge {
+                            let trimmed = editName.trimmingCharacters(in: .whitespaces)
+                            if !trimmed.isEmpty {
+                                dataStore.updateTextBadgeOption(badge, name: trimmed, color: editColor)
+                            }
+                        }
+                        showEditSheet = false
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(dataStore.storeData.themeColor.toColor())
+                )
+            }
+        }
+    }
+}
+
+// MARK: - 热度标选项管理
+
+struct HotBadgeOptionsEditView: View {
+    @EnvironmentObject var dataStore: DataStore
+    @State private var newBadgeName: String = ""
+    @State private var newBadgeColor: String = "#FF4500"
+    @State private var editingBadge: BadgeOption? = nil
+    @State private var editName: String = ""
+    @State private var editColor: String = "#FF4500"
+    @State private var showEditSheet = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("热度标选项（商品名后/原价前无框标签）：")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            // 现有选项列表
+            let options = dataStore.storeData.hotBadgeOptions
+            if options.isEmpty {
+                Text("暂无热度标选项，请在下方添加")
+                    .font(.caption)
+                    .foregroundColor(.gray.opacity(0.7))
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(options) { option in
+                    HStack {
+                        Text(option.name)
+                            .font(.system(size: 15))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Circle()
+                            .fill(option.color.toColor())
+                            .frame(width: 20, height: 20)
+                        
+                        Button(action: {
+                            editingBadge = option
+                            editName = option.name
+                            editColor = option.color
+                            showEditSheet = true
+                        }) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 12))
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        .padding(.leading, 8)
+                        
+                        Button(action: {
+                            dataStore.deleteHotBadgeOption(option)
+                        }) {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(BorderlessButtonStyle())
+                        .padding(.leading, 8)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            
+            // 添加新选项
+            HStack(spacing: 8) {
+                TextField("标签文字", text: $newBadgeName)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .frame(maxWidth: .infinity)
+                
+                ColorPicker("", selection: Binding(
+                    get: { newBadgeColor.toColor() },
+                    set: { newBadgeColor = $0.toHex() }
+                ))
+                .labelsHidden()
+                .frame(width: 40)
+                
+                Button(action: {
+                    let trimmed = newBadgeName.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.isEmpty {
+                        dataStore.addHotBadgeOption(trimmed, color: newBadgeColor)
+                        newBadgeName = ""
+                        newBadgeColor = "#FF4500"
+                    }
+                }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.green)
+                }
+                .disabled(newBadgeName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding(.vertical, 4)
+        // 编辑弹窗
+        .sheet(isPresented: $showEditSheet) {
+            NavigationView {
+                VStack(spacing: 20) {
+                    Text("编辑热度标")
+                        .font(.headline)
+                        .padding(.top)
+                    
+                    TextField("标签文字", text: $editName)
+                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                        .padding(.horizontal)
+                    
+                    HStack {
+                        Text("颜色：")
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("选择颜色", selection: Binding(
+                            get: { editColor.toColor() },
+                            set: { editColor = $0.toHex() }
+                        ))
+                        .labelsHidden()
+                    }
+                    .padding(.horizontal)
+                    
+                    // 预览
+                    HStack(spacing: 6) {
+                        Text("预览：")
+                            .foregroundColor(.gray)
+                        HotBadgeView(text: editName.isEmpty ? "热度" : editName, color: editColor.toColor())
+                    }
+                    
+                    Spacer()
+                }
+                .navigationBarItems(
+                    leading: Button("取消") {
+                        showEditSheet = false
+                    },
+                    trailing: Button("保存") {
+                        if let badge = editingBadge {
+                            let trimmed = editName.trimmingCharacters(in: .whitespaces)
+                            if !trimmed.isEmpty {
+                                dataStore.updateHotBadgeOption(badge, name: trimmed, color: editColor)
+                            }
+                        }
+                        showEditSheet = false
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(dataStore.storeData.themeColor.toColor())
+                )
+            }
         }
     }
 }
@@ -671,6 +937,7 @@ struct ProductRowView: View {
 
 // MARK: - 滑动删除容器（兼容iOS 14+）
 //
+
 struct SwipeToDeleteRow<Content: View>: View {
     let content: Content
     let onDelete: () -> Void

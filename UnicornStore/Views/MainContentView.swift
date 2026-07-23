@@ -160,16 +160,52 @@ struct MainContentView: View {
     
     // MARK: - 绘制单个商品行
     private func drawQuoteProduct(c: CGContext, product: Product, y: CGFloat, leftX: CGFloat, priceRightX: CGFloat, showP: Bool) {
+        var cx = leftX
+        
+        // 文字标（带框）
+        if !product.textBadge.isEmpty {
+            let badgeColor = product.textBadgeColor.toUIColor()
+            let badgeText = product.textBadge as NSString
+            let badgeFont = UIFont.boldSystemFont(ofSize: 9)
+            let badgeAttr: [NSAttributedString.Key: Any] = [.font: badgeFont, .foregroundColor: UIColor.white]
+            let badgeSize = badgeText.size(withAttributes: badgeAttr)
+            let bw = badgeSize.width + 8
+            let bh = badgeSize.height + 4
+            let bx = cx
+            let by = y + 2
+            
+            // 填充矩形
+            let boxRect = CGRect(x: bx, y: by, width: bw, height: bh)
+            c.setFillColor(badgeColor.cgColor)
+            c.addPath(UIBezierPath(roundedRect: boxRect, cornerRadius: 2).cgPath)
+            c.fillPath()
+            
+            // 文字
+            badgeText.draw(at: CGPoint(x: bx + 4, y: by + 2), withAttributes: badgeAttr)
+            cx += bw + 6
+        }
+        
+        // 商品名
         let nameAttr: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 15),
             .foregroundColor: UIColor.black
         ]
         let name = product.name as NSString
-        var cx = leftX
-        
-        // 商品名
         name.draw(at: CGPoint(x: cx, y: y + 2), withAttributes: nameAttr)
-        cx += name.size(withAttributes: nameAttr).width + 8
+        cx += name.size(withAttributes: nameAttr).width + 6
+        
+        // 热度标（在商品名和原价中间）
+        if showP && !product.hotBadge.isEmpty {
+            let hotColor = product.hotBadgeColor.toUIColor()
+            let hotAttr: [NSAttributedString.Key: Any] = [
+                .font: UIFont.boldSystemFont(ofSize: 10),
+                .foregroundColor: hotColor
+            ]
+            let hotStr = product.hotBadge as NSString
+            // 先画个空格分隔
+            hotStr.draw(at: CGPoint(x: cx, y: y + 5), withAttributes: hotAttr)
+            cx += hotStr.size(withAttributes: hotAttr).width + 6
+        }
         
         if showP {
             // 原价
@@ -341,8 +377,6 @@ struct MainContentView: View {
                     .font: UIFont.systemFont(ofSize: 12),
                     .foregroundColor: UIColor.darkGray
                 ]
-                let annSize = (annText as NSString).size(withAttributes: annAttr)
-                // 自动换行，限制宽度
                 let maxW = pageWidth - margin * 2
                 let rect = (annText as NSString).boundingRect(
                     with: CGSize(width: maxW, height: .greatestFiniteMagnitude),
@@ -505,14 +539,26 @@ struct ImageDetailOverlay: View {
                     // 商品信息
                     if let p = retainedProduct ?? product {
                         VStack(spacing: 6) {
-                            Text(p.name)
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(.black)
+                            // 文字标 + 商品名
+                            HStack(spacing: 6) {
+                                if !p.textBadge.isEmpty {
+                                    TextBadgeView(text: p.textBadge, color: p.textBadgeColor.toColor())
+                                }
+                                Text(p.name)
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.black)
+                            }
                             
                             if DataStore.shared.storeData.showPrice {
-                                Text(p.price)
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.orange)
+                                HStack(spacing: 6) {
+                                    // 热度标
+                                    if !p.hotBadge.isEmpty {
+                                        HotBadgeView(text: p.hotBadge, color: p.hotBadgeColor.toColor())
+                                    }
+                                    Text(p.price)
+                                        .font(.system(size: 22, weight: .bold))
+                                        .foregroundColor(.orange)
+                                }
                             }
                             
                             if !p.description.isEmpty {

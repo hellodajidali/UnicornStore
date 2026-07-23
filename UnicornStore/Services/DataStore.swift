@@ -132,6 +132,40 @@ class DataStore: ObservableObject {
         }
     }
     
+    // MARK: - 标签操作
+    
+    func addTextBadgeOption(_ name: String, color: String) {
+        let option = BadgeOption(name: name, color: color)
+        storeData.textBadgeOptions.append(option)
+    }
+    
+    func deleteTextBadgeOption(_ option: BadgeOption) {
+        storeData.textBadgeOptions.removeAll { $0.id == option.id }
+    }
+    
+    func updateTextBadgeOption(_ option: BadgeOption, name: String, color: String) {
+        if let idx = storeData.textBadgeOptions.firstIndex(where: { $0.id == option.id }) {
+            storeData.textBadgeOptions[idx].name = name
+            storeData.textBadgeOptions[idx].color = color
+        }
+    }
+    
+    func addHotBadgeOption(_ name: String, color: String) {
+        let option = BadgeOption(name: name, color: color)
+        storeData.hotBadgeOptions.append(option)
+    }
+    
+    func deleteHotBadgeOption(_ option: BadgeOption) {
+        storeData.hotBadgeOptions.removeAll { $0.id == option.id }
+    }
+    
+    func updateHotBadgeOption(_ option: BadgeOption, name: String, color: String) {
+        if let idx = storeData.hotBadgeOptions.firstIndex(where: { $0.id == option.id }) {
+            storeData.hotBadgeOptions[idx].name = name
+            storeData.hotBadgeOptions[idx].color = color
+        }
+    }
+    
     // MARK: - 导出/导入备份（分享 JSON 文件）
     
     func exportData() -> Data? {

@@ -72,8 +72,6 @@ struct CategoryEditView: View {
     @State private var showDeleteAlert = false
     @State private var categoryToDelete: Category? = nil
     
-    private let presetColors = ["#663399", "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#FF8C00", "#20B2AA", "#FF69B4", "#000000", "#808080"]
-    
     var body: some View {
         Section(header: Text("分类管理").font(.headline)) {
             VStack(alignment: .leading, spacing: 8) {
@@ -198,7 +196,7 @@ struct CategoryEditView: View {
                 }
             )
         }
-        // 字体/颜色设置
+        // 字体/颜色设置（系统调色板）
         .sheet(isPresented: $showFontColorSheet) {
             NavigationView {
                 Form {
@@ -210,19 +208,14 @@ struct CategoryEditView: View {
                     }
                     
                     Section(header: Text("字体颜色")) {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 10) {
-                            ForEach(presetColors, id: \.self) { color in
-                                Circle()
-                                    .fill(color.toColor())
-                                    .frame(width: 36, height: 36)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(categoryTextColor == color ? Color.primary : Color.clear, lineWidth: 3)
-                                    )
-                                    .onTapGesture {
-                                        categoryTextColor = color
-                                    }
-                            }
+                        HStack {
+                            Spacer()
+                            ColorPicker("选择颜色", selection: Binding(
+                                get: { categoryTextColor.toColor() },
+                                set: { categoryTextColor = $0.toHex() }
+                            ))
+                            .labelsHidden()
+                            Spacer()
                         }
                     }
                     

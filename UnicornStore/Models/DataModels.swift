@@ -4,6 +4,24 @@ import SwiftUI
 
 // MARK: - 数据模型
 
+// MARK: - 标签选项（文字标/热度标）
+
+struct BadgeOption: Codable, Identifiable, Equatable {
+    var id: UUID
+    var name: String      // 显示文字，如"正品"、"精品"
+    var color: String     // hex颜色
+    
+    init(id: UUID = UUID(), name: String, color: String = "#FF4500") {
+        self.id = id
+        self.name = name
+        self.color = color
+    }
+    
+    static func == (lhs: BadgeOption, rhs: BadgeOption) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
 struct StoreData: Codable {
     // 商店名称相关
     var storeName: String
@@ -39,6 +57,10 @@ struct StoreData: Codable {
     // 活动设置
     var showPromotion: Bool  // true=显示活动标签
     
+    // 标签选项（文字标/热度标）
+    var textBadgeOptions: [BadgeOption]  // 预定义文字标选项
+    var hotBadgeOptions: [BadgeOption]   // 预定义热度标选项
+    
     static func defaultData() -> StoreData {
         let allCategory = Category(id: UUID(), name: "全部")
         let cat1 = Category(id: UUID(), name: "热门推荐")
@@ -64,7 +86,17 @@ struct StoreData: Codable {
             quoteSingleColumn: false,
             quoteFooter: "谢谢惠顾！欢迎下次光临",
             quoteAnnouncement: "",
-            showPromotion: true
+            showPromotion: true,
+            textBadgeOptions: [
+                BadgeOption(name: "正品", color: "#FF4500"),
+                BadgeOption(name: "精品", color: "#FF8C00"),
+                BadgeOption(name: "推荐", color: "#FF6347"),
+            ],
+            hotBadgeOptions: [
+                BadgeOption(name: "热卖", color: "#FF4500"),
+                BadgeOption(name: "爆款", color: "#DC143C"),
+                BadgeOption(name: "新品", color: "#32CD32"),
+            ]
         )
     }
     
@@ -73,6 +105,7 @@ struct StoreData: Codable {
         case storeName, storeNameFontSize, storeNameColor, announcement
         case categories, products, gridColumns, showPrice, showTextOnly, themeColor
         case announcementBgColor, storeNameBgColor, quoteSingleColumn, quoteFooter, quoteAnnouncement, showPromotion
+        case textBadgeOptions, hotBadgeOptions
     }
     
     init(storeName: String, storeNameFontSize: CGFloat, storeNameColor: String,
@@ -81,7 +114,8 @@ struct StoreData: Codable {
          announcementBgColor: String = "#F0F0F0", storeNameBgColor: String = "#FFFFFF",
          quoteSingleColumn: Bool = false, quoteFooter: String = "谢谢惠顾！欢迎下次光临",
          quoteAnnouncement: String = "",
-         showPromotion: Bool = true) {
+         showPromotion: Bool = true,
+         textBadgeOptions: [BadgeOption] = [], hotBadgeOptions: [BadgeOption] = []) {
         self.storeName = storeName
         self.storeNameFontSize = storeNameFontSize
         self.storeNameColor = storeNameColor
@@ -98,6 +132,8 @@ struct StoreData: Codable {
         self.quoteFooter = quoteFooter
         self.quoteAnnouncement = quoteAnnouncement
         self.showPromotion = showPromotion
+        self.textBadgeOptions = textBadgeOptions
+        self.hotBadgeOptions = hotBadgeOptions
     }
     
     init(from decoder: Decoder) throws {
@@ -118,6 +154,8 @@ struct StoreData: Codable {
         quoteFooter = try c.decodeIfPresent(String.self, forKey: .quoteFooter) ?? "谢谢惠顾！欢迎下次光临"
         quoteAnnouncement = try c.decodeIfPresent(String.self, forKey: .quoteAnnouncement) ?? ""
         showPromotion = try c.decodeIfPresent(Bool.self, forKey: .showPromotion) ?? true
+        textBadgeOptions = try c.decodeIfPresent([BadgeOption].self, forKey: .textBadgeOptions) ?? []
+        hotBadgeOptions = try c.decodeIfPresent([BadgeOption].self, forKey: .hotBadgeOptions) ?? []
     }
     
     func encode(to encoder: Encoder) throws {
@@ -138,6 +176,8 @@ struct StoreData: Codable {
         try c.encode(quoteFooter, forKey: .quoteFooter)
         try c.encode(quoteAnnouncement, forKey: .quoteAnnouncement)
         try c.encode(showPromotion, forKey: .showPromotion)
+        try c.encode(textBadgeOptions, forKey: .textBadgeOptions)
+        try c.encode(hotBadgeOptions, forKey: .hotBadgeOptions)
     }
 }
 
@@ -184,6 +224,14 @@ struct Product: Codable, Identifiable, Equatable {
     var imageOffsetY: CGFloat  // 图片垂直偏移（归一化 -1~1）
     var promotion: String  // 活动信息，非空时显示红色"活动"标签
     
+    // 文字标
+    var textBadge: String  // 文字标内容（如"正品"），空=不显示
+    var textBadgeColor: String  // 文字标颜色（hex）
+    
+    // 热度标
+    var hotBadge: String  // 热度标内容（如"热卖"），空=不显示
+    var hotBadgeColor: String  // 热度标颜色（hex）
+    
     var image: UIImage? {
         if let data = imageData {
             return UIImage(data: data)
@@ -222,7 +270,7 @@ struct Product: Codable, Identifiable, Equatable {
         return current < orig
     }
     
-    init(id: UUID = UUID(), name: String, price: String, originalPrice: String = "", categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0, promotion: String = "") {
+    init(id: UUID = UUID(), name: String, price: String, originalPrice: String = "", categoryId: UUID? = nil, imageData: Data? = nil, description: String = "", isActive: Bool = true, imageOffsetX: CGFloat = 0, imageOffsetY: CGFloat = 0, promotion: String = "", textBadge: String = "", textBadgeColor: String = "#FF4500", hotBadge: String = "", hotBadgeColor: String = "#FF4500") {
         self.id = id
         self.name = name
         self.price = price
@@ -234,6 +282,10 @@ struct Product: Codable, Identifiable, Equatable {
         self.imageOffsetX = imageOffsetX
         self.imageOffsetY = imageOffsetY
         self.promotion = promotion
+        self.textBadge = textBadge
+        self.textBadgeColor = textBadgeColor
+        self.hotBadge = hotBadge
+        self.hotBadgeColor = hotBadgeColor
     }
     
     static func == (lhs: Product, rhs: Product) -> Bool {
@@ -243,6 +295,7 @@ struct Product: Codable, Identifiable, Equatable {
     // 自定义 Codable 兼容旧数据
     enum CodingKeys: String, CodingKey {
         case id, name, price, originalPrice, categoryId, imageData, description, isActive, imageOffsetX, imageOffsetY, promotion
+        case textBadge, textBadgeColor, hotBadge, hotBadgeColor
     }
     
     init(from decoder: Decoder) throws {
@@ -258,6 +311,10 @@ struct Product: Codable, Identifiable, Equatable {
         imageOffsetX = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetX) ?? 0
         imageOffsetY = try c.decodeIfPresent(CGFloat.self, forKey: .imageOffsetY) ?? 0
         promotion = try c.decodeIfPresent(String.self, forKey: .promotion) ?? ""
+        textBadge = try c.decodeIfPresent(String.self, forKey: .textBadge) ?? ""
+        textBadgeColor = try c.decodeIfPresent(String.self, forKey: .textBadgeColor) ?? "#FF4500"
+        hotBadge = try c.decodeIfPresent(String.self, forKey: .hotBadge) ?? ""
+        hotBadgeColor = try c.decodeIfPresent(String.self, forKey: .hotBadgeColor) ?? "#FF4500"
     }
     
     func encode(to encoder: Encoder) throws {
@@ -273,6 +330,10 @@ struct Product: Codable, Identifiable, Equatable {
         try c.encode(imageOffsetX, forKey: .imageOffsetX)
         try c.encode(imageOffsetY, forKey: .imageOffsetY)
         try c.encode(promotion, forKey: .promotion)
+        try c.encode(textBadge, forKey: .textBadge)
+        try c.encode(textBadgeColor, forKey: .textBadgeColor)
+        try c.encode(hotBadge, forKey: .hotBadge)
+        try c.encode(hotBadgeColor, forKey: .hotBadgeColor)
     }
 }
 

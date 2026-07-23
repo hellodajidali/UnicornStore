@@ -17,6 +17,14 @@ struct AddProductView: View {
     @State private var imageOffsetX: CGFloat = 0
     @State private var imageOffsetY: CGFloat = 0
     
+    // 文字标
+    @State private var textBadge: String = ""
+    @State private var textBadgeColor: String = "#FF4500"
+    
+    // 热度标
+    @State private var hotBadge: String = ""
+    @State private var hotBadgeColor: String = "#FF4500"
+    
     private var isFormValid: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
         price.trimmingCharacters(in: .whitespaces).count > 1
@@ -147,6 +155,80 @@ struct AddProductView: View {
                 }
             }
             
+            // 文字标设置
+            Section(header: Text("文字标").font(.headline)) {
+                if dataStore.storeData.textBadgeOptions.isEmpty {
+                    Text("暂无文字标选项，请先在管理后台添加")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                } else {
+                    Picker("选择文字标", selection: $textBadge) {
+                        Text("无").tag("")
+                        ForEach(dataStore.storeData.textBadgeOptions) { option in
+                            Text(option.name).tag(option.name)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: textBadge) { newValue in
+                        // 选中选项时自动设置颜色
+                        if let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
+                            textBadgeColor = option.color
+                        }
+                    }
+                }
+                
+                if !textBadge.isEmpty {
+                    HStack {
+                        Text("颜色：")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("", selection: Binding(
+                            get: { textBadgeColor.toColor() },
+                            set: { textBadgeColor = $0.toHex() }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+            }
+            
+            // 热度标设置
+            Section(header: Text("热度标").font(.headline)) {
+                if dataStore.storeData.hotBadgeOptions.isEmpty {
+                    Text("暂无热度标选项，请先在管理后台添加")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                } else {
+                    Picker("选择热度标", selection: $hotBadge) {
+                        Text("无").tag("")
+                        ForEach(dataStore.storeData.hotBadgeOptions) { option in
+                            Text(option.name).tag(option.name)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: hotBadge) { newValue in
+                        // 选中选项时自动设置颜色
+                        if let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
+                            hotBadgeColor = option.color
+                        }
+                    }
+                }
+                
+                if !hotBadge.isEmpty {
+                    HStack {
+                        Text("颜色：")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("", selection: Binding(
+                            get: { hotBadgeColor.toColor() },
+                            set: { hotBadgeColor = $0.toHex() }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+            }
+            
             Section {
                 Button(action: saveProduct) {
                     Text("添加商品")
@@ -183,7 +265,11 @@ struct AddProductView: View {
             description: description.trimmingCharacters(in: .whitespaces),
             imageOffsetX: imageOffsetX,
             imageOffsetY: imageOffsetY,
-            promotion: promotion.trimmingCharacters(in: .whitespaces)
+            promotion: promotion.trimmingCharacters(in: .whitespaces),
+            textBadge: textBadge,
+            textBadgeColor: textBadgeColor,
+            hotBadge: hotBadge,
+            hotBadgeColor: hotBadgeColor
         )
         
         dataStore.addProduct(product)
@@ -211,6 +297,14 @@ struct EditProductView: View {
     @State private var isLoaded = false
     @State private var imageOffsetX: CGFloat = 0
     @State private var imageOffsetY: CGFloat = 0
+    
+    // 文字标
+    @State private var textBadge: String = ""
+    @State private var textBadgeColor: String = "#FF4500"
+    
+    // 热度标
+    @State private var hotBadge: String = ""
+    @State private var hotBadgeColor: String = "#FF4500"
     
     private var cardWidth: CGFloat {
         let screenWidth = UIScreen.main.bounds.width - 24
@@ -336,6 +430,86 @@ struct EditProductView: View {
                 }
             }
             
+            // 文字标设置
+            Section(header: Text("文字标").font(.headline)) {
+                if dataStore.storeData.textBadgeOptions.isEmpty {
+                    Text("暂无文字标选项，请先在管理后台添加")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                } else {
+                    Picker("选择文字标", selection: $textBadge) {
+                        Text("无").tag("")
+                        ForEach(dataStore.storeData.textBadgeOptions) { option in
+                            Text(option.name).tag(option.name)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: textBadge) { newValue in
+                        hasChanges = true
+                        if let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
+                            textBadgeColor = option.color
+                        }
+                    }
+                }
+                
+                if !textBadge.isEmpty {
+                    HStack {
+                        Text("颜色：")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("", selection: Binding(
+                            get: { textBadgeColor.toColor() },
+                            set: {
+                                textBadgeColor = $0.toHex()
+                                hasChanges = true
+                            }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+            }
+            
+            // 热度标设置
+            Section(header: Text("热度标").font(.headline)) {
+                if dataStore.storeData.hotBadgeOptions.isEmpty {
+                    Text("暂无热度标选项，请先在管理后台添加")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                } else {
+                    Picker("选择热度标", selection: $hotBadge) {
+                        Text("无").tag("")
+                        ForEach(dataStore.storeData.hotBadgeOptions) { option in
+                            Text(option.name).tag(option.name)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: hotBadge) { newValue in
+                        hasChanges = true
+                        if let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
+                            hotBadgeColor = option.color
+                        }
+                    }
+                }
+                
+                if !hotBadge.isEmpty {
+                    HStack {
+                        Text("颜色：")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                        Spacer()
+                        ColorPicker("", selection: Binding(
+                            get: { hotBadgeColor.toColor() },
+                            set: {
+                                hotBadgeColor = $0.toHex()
+                                hasChanges = true
+                            }
+                        ))
+                        .labelsHidden()
+                    }
+                }
+            }
+            
             Section {
                 Button(action: saveChanges) {
                     Text(hasChanges ? "保存修改" : "未做修改")
@@ -373,6 +547,10 @@ struct EditProductView: View {
         productImage = product.image
         imageOffsetX = product.imageOffsetX
         imageOffsetY = product.imageOffsetY
+        textBadge = product.textBadge
+        textBadgeColor = product.textBadgeColor
+        hotBadge = product.hotBadge
+        hotBadgeColor = product.hotBadgeColor
     }
     
     private func saveChanges() {
@@ -388,7 +566,11 @@ struct EditProductView: View {
             description: description.trimmingCharacters(in: .whitespaces),
             imageOffsetX: imageOffsetX,
             imageOffsetY: imageOffsetY,
-            promotion: promotion.trimmingCharacters(in: .whitespaces)
+            promotion: promotion.trimmingCharacters(in: .whitespaces),
+            textBadge: textBadge,
+            textBadgeColor: textBadgeColor,
+            hotBadge: hotBadge,
+            hotBadgeColor: hotBadgeColor
         )
         
         dataStore.updateProduct(updated)
