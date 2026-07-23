@@ -167,14 +167,19 @@ struct MainContentView: View {
             let badgeColor = product.textBadgeColor.toUIColor()
             let badgeText = product.textBadge as NSString
             let badgeFont = UIFont.boldSystemFont(ofSize: 9)
+            let nameFont = UIFont.systemFont(ofSize: 15)
             let badgeAttr: [NSAttributedString.Key: Any] = [.font: badgeFont, .foregroundColor: UIColor.white]
+            let nameAttr2: [NSAttributedString.Key: Any] = [.font: nameFont]
             let badgeSize = badgeText.size(withAttributes: badgeAttr)
+            let nameLineHeight = nameFont.ascender - nameFont.descender + nameFont.leading
+            _ = (product.name as NSString).size(withAttributes: nameAttr2)
             let bw = badgeSize.width + 8
             let bh = badgeSize.height + 4
             let bx = cx
-            // 框顶部比文字顶部高2pt（padding），文字顶部与商品名对齐在同一 Y
-            let by = y  // 框顶部
-            let textY = y + 2  // 框内文字顶部，与商品名文字顶部对齐
+            // 垂直居中：badge 框中心 = 商品名文字中心
+            let nameCenterY = y + 2 + nameLineHeight / 2
+            let by = nameCenterY - bh / 2  // 框顶部
+            let textY = by + 2  // 框内文字顶部（2pt padding）
             
             // 填充矩形
             let boxRect = CGRect(x: bx, y: by, width: bw, height: bh)

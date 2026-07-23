@@ -87,21 +87,29 @@ class DataStore: ObservableObject {
     // MARK: - 商品操作
     
     func addProduct(_ product: Product) {
-        storeData.products.append(product)
+        var updated = storeData
+        updated.products.append(product)
+        storeData = updated  // 整体赋值触发 @Published + didSet
     }
     
     func updateProduct(_ product: Product) {
         if let index = storeData.products.firstIndex(where: { $0.id == product.id }) {
-            storeData.products[index] = product
+            var updated = storeData
+            updated.products[index] = product
+            storeData = updated  // 整体赋值触发 @Published + didSet → saveToDisk()
         }
     }
     
     func deleteProduct(_ product: Product) {
-        storeData.products.removeAll { $0.id == product.id }
+        var updated = storeData
+        updated.products.removeAll { $0.id == product.id }
+        storeData = updated  // 整体赋值触发 @Published + didSet
     }
     
     func moveProduct(from source: IndexSet, to destination: Int) {
-        storeData.products.move(fromOffsets: source, toOffset: destination)
+        var updated = storeData
+        updated.products.move(fromOffsets: source, toOffset: destination)
+        storeData = updated  // 整体赋值触发 @Published + didSet
     }
     
     // MARK: - 分类操作
