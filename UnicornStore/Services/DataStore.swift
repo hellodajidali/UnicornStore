@@ -144,33 +144,45 @@ class DataStore: ObservableObject {
     
     func addTextBadgeOption(_ name: String, color: String) {
         let option = BadgeOption(name: name, color: color)
-        storeData.textBadgeOptions.append(option)
+        var updated = storeData
+        updated.textBadgeOptions.append(option)
+        storeData = updated
     }
     
     func deleteTextBadgeOption(_ option: BadgeOption) {
-        storeData.textBadgeOptions.removeAll { $0.id == option.id }
+        var updated = storeData
+        updated.textBadgeOptions.removeAll { $0.id == option.id }
+        storeData = updated
     }
     
     func updateTextBadgeOption(_ option: BadgeOption, name: String, color: String) {
         if let idx = storeData.textBadgeOptions.firstIndex(where: { $0.id == option.id }) {
-            storeData.textBadgeOptions[idx].name = name
-            storeData.textBadgeOptions[idx].color = color
+            var updated = storeData
+            updated.textBadgeOptions[idx].name = name
+            updated.textBadgeOptions[idx].color = color
+            storeData = updated
         }
     }
     
     func addHotBadgeOption(_ name: String, color: String) {
         let option = BadgeOption(name: name, color: color)
-        storeData.hotBadgeOptions.append(option)
+        var updated = storeData
+        updated.hotBadgeOptions.append(option)
+        storeData = updated
     }
     
     func deleteHotBadgeOption(_ option: BadgeOption) {
-        storeData.hotBadgeOptions.removeAll { $0.id == option.id }
+        var updated = storeData
+        updated.hotBadgeOptions.removeAll { $0.id == option.id }
+        storeData = updated
     }
     
     func updateHotBadgeOption(_ option: BadgeOption, name: String, color: String) {
         if let idx = storeData.hotBadgeOptions.firstIndex(where: { $0.id == option.id }) {
-            storeData.hotBadgeOptions[idx].name = name
-            storeData.hotBadgeOptions[idx].color = color
+            var updated = storeData
+            updated.hotBadgeOptions[idx].name = name
+            updated.hotBadgeOptions[idx].color = color
+            storeData = updated
         }
     }
     
