@@ -1,5 +1,4 @@
 import SwiftUI
-import Photos
 
 // MARK: - 主界面
 
@@ -10,7 +9,9 @@ struct MainContentView: View {
     @State private var enlargedProduct: Product? = nil
     @State private var showQuoteAlert = false
     @State private var quoteAlertMessage = ""
-
+    @State private var showShareSheet = false
+    @State private var shareImage: UIImage?
+    
     private var allCategoryId: UUID? {
         dataStore.storeData.categories.first?.id
     }
@@ -77,6 +78,11 @@ struct MainContentView: View {
             }
             .alert(isPresented: $showQuoteAlert) {
                 Alert(title: Text("报价单"), message: Text(quoteAlertMessage), dismissButton: .default(Text("确定")))
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let image = shareImage {
+                    ShareSheet(activityItems: [image])
+                }
             }
             .onAppear {
                 if selectedCategoryId == nil {
@@ -458,28 +464,8 @@ struct MainContentView: View {
             )
         }
         
-        // 直接保存到相册（PHPhotoLibrary），绕过 ShareSheet 在 TrollStore 下的闪退问题
-        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-            guard status == .authorized || status == .limited else {
-                DispatchQueue.main.async {
-                    quoteAlertMessage = "请在弹窗中允许访问相册以保存报价单"
-                    showQuoteAlert = true
-                }
-                return
-            }
-            PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            }) { success, error in
-                DispatchQueue.main.async {
-                    if success {
-                        quoteAlertMessage = "报价单已保存到相册"
-                    } else {
-                        quoteAlertMessage = "保存失败：\(error?.localizedDescription ?? "未知错误")"
-                    }
-                    showQuoteAlert = true
-                }
-            }
-        }
+        shareImage = image
+        showShareSheet = true
     }
 }
 
