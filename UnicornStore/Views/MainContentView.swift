@@ -172,7 +172,9 @@ struct MainContentView: View {
             let bw = badgeSize.width + 8
             let bh = badgeSize.height + 4
             let bx = cx
-            let by = y + 2
+            // 框顶部比文字顶部高2pt（padding），文字顶部与商品名对齐在同一 Y
+            let by = y  // 框顶部
+            let textY = y + 2  // 框内文字顶部，与商品名文字顶部对齐
             
             // 填充矩形
             let boxRect = CGRect(x: bx, y: by, width: bw, height: bh)
@@ -181,7 +183,7 @@ struct MainContentView: View {
             c.fillPath()
             
             // 文字
-            badgeText.draw(at: CGPoint(x: bx + 4, y: by + 2), withAttributes: badgeAttr)
+            badgeText.draw(at: CGPoint(x: bx + 4, y: textY), withAttributes: badgeAttr)
             cx += bw + 6
         }
         

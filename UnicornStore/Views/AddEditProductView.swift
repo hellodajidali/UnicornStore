@@ -446,7 +446,9 @@ struct EditProductView: View {
                     .pickerStyle(MenuPickerStyle())
                     .onChange(of: textBadge) { newValue in
                         hasChanges = true
-                        if let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
+                        // 只在用户主动切换标签时自动填充选项默认色（排除初始加载）
+                        if newValue != product.textBadge,
+                           let option = dataStore.storeData.textBadgeOptions.first(where: { $0.name == newValue }) {
                             textBadgeColor = option.color
                         }
                     }
@@ -486,7 +488,9 @@ struct EditProductView: View {
                     .pickerStyle(MenuPickerStyle())
                     .onChange(of: hotBadge) { newValue in
                         hasChanges = true
-                        if let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
+                        // 只在用户主动切换标签时自动填充选项默认色
+                        if newValue != product.hotBadge,
+                           let option = dataStore.storeData.hotBadgeOptions.first(where: { $0.name == newValue }) {
                             hotBadgeColor = option.color
                         }
                     }
