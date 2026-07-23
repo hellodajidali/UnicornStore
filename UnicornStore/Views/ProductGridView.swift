@@ -114,6 +114,7 @@ struct TextOnlyProductRow: View {
             // 文字标（带框，在商品名前）
             if !product.textBadge.isEmpty {
                 TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+                    .fixedSize()
             }
             
             // 商品名（双击放大查看）
@@ -122,13 +123,13 @@ struct TextOnlyProductRow: View {
                 .foregroundColor(.primary)
                 .lineLimit(2)
             
-            // 热度标（在商品名和原价中间）
-            if !product.hotBadge.isEmpty && dataStore.storeData.showPrice {
+            // 热度标（在商品名和原价中间，不受 showPrice 控制）
+            if !product.hotBadge.isEmpty {
                 HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
                     .padding(.leading, 2)
             }
             
-            // 价格（由 hidePrice 开关控制显隐）
+            // 原价/现价/涨降（由 showPrice 控制）
             if dataStore.storeData.showPrice {
                 // 原价（如有，灰色删除线）
                 if product.hasValidOriginalPrice {
@@ -149,17 +150,18 @@ struct TextOnlyProductRow: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(product.isPriceDown ? .green : .red)
                 }
-                // 活动标签
-                if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
-                    Text("·")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 14, weight: .bold))
-                    (Text("活动：")
-                        .foregroundColor(.red)
-                    + Text(product.promotion)
-                        .foregroundColor(.primary))
-                        .font(.system(size: 13, weight: .bold))
-                }
+            }
+            
+            // 活动标签（不受 showPrice 控制）
+            if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
+                Text("·")
+                    .foregroundColor(.gray)
+                    .font(.system(size: 14, weight: .bold))
+                (Text("活动：")
+                    .foregroundColor(.red)
+                + Text(product.promotion)
+                    .foregroundColor(.primary))
+                    .font(.system(size: 13, weight: .bold))
             }
             
             Spacer(minLength: 0)
@@ -251,6 +253,7 @@ struct ProductCard: View {
             HStack(spacing: 4) {
                 if !product.textBadge.isEmpty {
                     TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+                        .fixedSize()
                 }
                 Text(product.name)
                     .font(.system(size: 13, weight: .medium))
@@ -262,41 +265,45 @@ struct ProductCard: View {
             .padding(.horizontal, 6)
             .padding(.top, 6)
             
-            // 价格（可隐藏）
-            if dataStore.storeData.showPrice {
-                VStack(spacing: 2) {
-                    HStack(spacing: 4) {
-                        // 热度标（在原价前方）
-                        if !product.hotBadge.isEmpty {
-                            HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
-                        }
-                        
-                        // 原价（如有，灰色删除线）
-                        if product.hasValidOriginalPrice {
-                            Text(product.originalPrice)
-                                .font(.system(size: 11))
-                                .foregroundColor(.gray)
-                                .strikethrough()
-                        }
-                        
-                        // 现价
-                        Text(product.price)
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.orange)
-                        
-                        // 涨/降文字（绿色=降，红色=涨）
-                        if product.hasValidOriginalPrice {
-                            Text(product.isPriceDown ? "降" : "涨")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(product.isPriceDown ? .green : .red)
+            // 价格区域（热度标不受 showPrice 控制，原价/现价/涨降由开关控制）
+            if !product.hotBadge.isEmpty || dataStore.storeData.showPrice ||
+               (dataStore.storeData.showPromotion && !product.promotion.isEmpty) {
+                VStack(spacing: 4) {
+                    // 第一行：热度标 + 原价/现价/涨降
+                    if !product.hotBadge.isEmpty || dataStore.storeData.showPrice {
+                        HStack(spacing: 4) {
+                            // 热度标（始终显示）
+                            if !product.hotBadge.isEmpty {
+                                HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
+                            }
+                            
+                            // 原价/现价/涨降（受 showPrice 控制）
+                            if dataStore.storeData.showPrice {
+                                // 原价（如有，灰色删除线）
+                                if product.hasValidOriginalPrice {
+                                    Text(product.originalPrice)
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.gray)
+                                        .strikethrough()
+                                }
+                                
+                                // 现价
+                                Text(product.price)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.orange)
+                                
+                                // 涨/降文字（绿色=降，红色=涨）
+                                if product.hasValidOriginalPrice {
+                                    Text(product.isPriceDown ? "降" : "涨")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(product.isPriceDown ? .green : .red)
+                                }
+                            }
                         }
                     }
                     
-                    // 活动标签
+                    // 第二行：活动标签（独立一行，无 · 分隔符，不受 showPrice 控制）
                     if dataStore.storeData.showPromotion && !product.promotion.isEmpty {
-                        Text("·")
-                            .foregroundColor(.gray)
-                            .font(.system(size: 12))
                         HStack(spacing: 2) {
                             Text("活动：")
                                 .font(.system(size: 10, weight: .bold))
@@ -310,7 +317,7 @@ struct ProductCard: View {
                 }
                 .padding(.bottom, 8)
             } else {
-                // 即使没有价格也保持底部间距一致
+                // 即使没有内容也保持底部间距一致
                 Spacer().frame(height: 8)
             }
         }

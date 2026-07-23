@@ -303,7 +303,7 @@ struct MainContentView: View {
         
         // 计算总高度
         let hasAnn = !dataStore.storeData.quoteAnnouncement.isEmpty
-        var totalHeight: CGFloat = 32  // 顶部内边距（缩小）
+        var totalHeight: CGFloat = 8  // 顶部内边距（已缩小）
         totalHeight += 40  // 店名
         totalHeight += 24  // 日期
         totalHeight += 16  // 分隔线
@@ -336,7 +336,7 @@ struct MainContentView: View {
             c.setFillColor(UIColor.white.cgColor)
             c.fill(CGRect(x: 0, y: 0, width: pageWidth, height: totalHeight))
             
-            var y: CGFloat = 32
+            var y: CGFloat = 8
             
             // —— 店名 ——
             let titleAttr: [NSAttributedString.Key: Any] = [
