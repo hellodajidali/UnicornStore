@@ -113,7 +113,7 @@ struct TextOnlyProductRow: View {
         HStack(spacing: 8) {
             // 文字标（带框，在商品名前）
             if !product.textBadge.isEmpty {
-                TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+                TextBadgeView(text: product.textBadge, color: product.effectiveTextBadgeColor(from: dataStore.storeData.textBadgeOptions).toColor())
                     .fixedSize()
             }
             
@@ -125,7 +125,7 @@ struct TextOnlyProductRow: View {
             
             // 热度标（在商品名和原价中间，不受 showPrice 控制）
             if !product.hotBadge.isEmpty {
-                HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
+                HotBadgeView(text: product.hotBadge, color: product.effectiveHotBadgeColor(from: dataStore.storeData.hotBadgeOptions).toColor())
                     .padding(.leading, 2)
             }
             
@@ -252,7 +252,7 @@ struct ProductCard: View {
             // 商品名称（前面加文字标）
             HStack(spacing: 4) {
                 if !product.textBadge.isEmpty {
-                    TextBadgeView(text: product.textBadge, color: product.textBadgeColor.toColor())
+                    TextBadgeView(text: product.textBadge, color: product.effectiveTextBadgeColor(from: dataStore.storeData.textBadgeOptions).toColor())
                         .fixedSize()
                 }
                 Text(product.name)
@@ -274,7 +274,7 @@ struct ProductCard: View {
                         HStack(spacing: 4) {
                             // 热度标（始终显示）
                             if !product.hotBadge.isEmpty {
-                                HotBadgeView(text: product.hotBadge, color: product.hotBadgeColor.toColor())
+                                HotBadgeView(text: product.hotBadge, color: product.effectiveHotBadgeColor(from: dataStore.storeData.hotBadgeOptions).toColor())
                             }
                             
                             // 原价/现价/涨降（受 showPrice 控制）

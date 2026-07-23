@@ -164,7 +164,7 @@ struct MainContentView: View {
         
         // 文字标（带框）
         if !product.textBadge.isEmpty {
-            let badgeColor = product.textBadgeColor.toUIColor()
+            let badgeColor = product.effectiveTextBadgeColor(from: DataStore.shared.storeData.textBadgeOptions).toUIColor()
             let badgeText = product.textBadge as NSString
             let badgeFont = UIFont.boldSystemFont(ofSize: 9)
             let nameFont = UIFont.systemFont(ofSize: 15)
@@ -203,7 +203,7 @@ struct MainContentView: View {
         
         // 热度标（在商品名和原价中间）
         if showP && !product.hotBadge.isEmpty {
-            let hotColor = product.hotBadgeColor.toUIColor()
+            let hotColor = product.effectiveHotBadgeColor(from: DataStore.shared.storeData.hotBadgeOptions).toUIColor()
             let hotAttr: [NSAttributedString.Key: Any] = [
                 .font: UIFont.boldSystemFont(ofSize: 10),
                 .foregroundColor: hotColor
@@ -549,7 +549,7 @@ struct ImageDetailOverlay: View {
                             // 文字标 + 商品名
                             HStack(spacing: 6) {
                                 if !p.textBadge.isEmpty {
-                                    TextBadgeView(text: p.textBadge, color: p.textBadgeColor.toColor())
+                                    TextBadgeView(text: p.textBadge, color: p.effectiveTextBadgeColor(from: DataStore.shared.storeData.textBadgeOptions).toColor())
                                 }
                                 Text(p.name)
                                     .font(.system(size: 20, weight: .bold))
@@ -560,7 +560,7 @@ struct ImageDetailOverlay: View {
                                 HStack(spacing: 6) {
                                     // 热度标
                                     if !p.hotBadge.isEmpty {
-                                        HotBadgeView(text: p.hotBadge, color: p.hotBadgeColor.toColor())
+                                        HotBadgeView(text: p.hotBadge, color: p.effectiveHotBadgeColor(from: DataStore.shared.storeData.hotBadgeOptions).toColor())
                                     }
                                     Text(p.price)
                                         .font(.system(size: 22, weight: .bold))

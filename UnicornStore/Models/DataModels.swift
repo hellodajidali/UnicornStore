@@ -387,3 +387,31 @@ extension Color {
         return String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
     }
 }
+
+// MARK: - Product 便捷方法
+
+extension Product {
+    /// 获取文字标的有效颜色：查选项当前颜色，产品有自定义且不同于选项默认色时用产品色
+    func effectiveTextBadgeColor(from options: [BadgeOption]) -> String {
+        guard !textBadge.isEmpty else { return textBadgeColor }
+        if let option = options.first(where: { $0.name == textBadge }) {
+            if textBadgeColor != option.color {
+                return textBadgeColor  // 用户自定义了颜色
+            }
+            return option.color  // 使用选项当前颜色（随后台修改实时更新）
+        }
+        return textBadgeColor
+    }
+    
+    /// 获取热度标的有效颜色
+    func effectiveHotBadgeColor(from options: [BadgeOption]) -> String {
+        guard !hotBadge.isEmpty else { return hotBadgeColor }
+        if let option = options.first(where: { $0.name == hotBadge }) {
+            if hotBadgeColor != option.color {
+                return hotBadgeColor
+            }
+            return option.color
+        }
+        return hotBadgeColor
+    }
+}
