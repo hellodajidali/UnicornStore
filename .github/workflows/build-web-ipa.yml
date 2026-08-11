@@ -1,0 +1,38 @@
+name: Build Web IPA
+on:
+  push:
+    paths:
+      - 'unicorn-web-ipa/**'
+      - '.github/workflows/build-web-ipa.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - run: brew install xcodegen
+      - name: Generate project
+        working-directory: unicorn-web-ipa
+        run: xcodegen generate --spec project.yml
+      - name: Build
+        working-directory: unicorn-web-ipa
+        run: |
+          xcodebuild -project UnicornStoreWeb.xcodeproj -scheme UnicornStoreWeb \
+            -sdk iphoneos -configuration Release -derivedDataPath Build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+      - name: Package IPA
+        working-directory: unicorn-web-ipa
+        run: |
+          mkdir -p Payload
+          cp -r Build/Build/Products/Release-iphoneos/UnicornStoreWeb.app Payload/
+          zip -r UnicornStoreWeb.ipa Payload/
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnicornStoreWeb-IPA
+          path: unicorn-web-ipa/UnicornStoreWeb.ipa
+          compression-level: 0
