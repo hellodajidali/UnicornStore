@@ -67,7 +67,7 @@ final class OfflineURLProtocol: URLProtocol {
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
-    private var task: URLSessionDataTask?
+    private var dataTask: URLSessionDataTask?
 
     override func startLoading() {
         guard let url = request.url else {
@@ -91,7 +91,7 @@ final class OfflineURLProtocol: URLProtocol {
         var req = URLRequest(url: url)
         req.cachePolicy = .reloadIgnoringLocalCacheData
         req.timeoutInterval = 20
-        task = URLSession.shared.dataTask(with: req) { [weak self] data, resp, err in
+        dataTask = URLSession.shared.dataTask(with: req) { [weak self] data, resp, err in
             guard let self = self else { return }
             if let data = data, let http = resp as? HTTPURLResponse, http.statusCode == 200 {
                 CacheStore.shared.save(data, headers: self.headers(from: http), for: url)
@@ -105,7 +105,7 @@ final class OfflineURLProtocol: URLProtocol {
                 self.client?.urlProtocol(self, didFailWithError: err ?? URLError(.networkConnectionLost))
             }
         }
-        task?.resume()
+        dataTask?.resume()
     }
 
     /// 后台静默刷新缓存（有网时更新，失败不影响已返回的缓存）
@@ -127,6 +127,6 @@ final class OfflineURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {
-        task?.cancel()
+        dataTask?.cancel()
     }
 }
