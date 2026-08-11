@@ -24,6 +24,19 @@ jobs:
             -sdk iphoneos -configuration Release -derivedDataPath Build \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
           exit ${PIPESTATUS[0]}
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-ipa-build-log
+          path: unicorn-web-ipa/build.log
+          compression-level: 0
+      - name: Show errors
+        if: failure()
+        run: |
+          grep -n "error:" unicorn-web-ipa/build.log | head -30 | \
+            while IFS= read -r line; do echo "::error::$line"; done
+          tail -30 unicorn-web-ipa/build.log
       - name: Package IPA
         working-directory: unicorn-web-ipa
         run: |
