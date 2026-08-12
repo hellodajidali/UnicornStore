@@ -86,13 +86,18 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
         let js = """
         (async function(){
           try {
-            const imgs = document.querySelectorAll('img');
-            for (const img of imgs) {
-              try {
-                const r = await fetch(img.src);
-                const b = await r.blob();
-                img.src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
-              } catch(e) {}
+            const imgs = Array.from(document.querySelectorAll('img'));
+            // 并发分批转换（每批6张），避免串行太慢
+            const pool = 6;
+            for (let i = 0; i < imgs.length; i += pool) {
+              const batch = imgs.slice(i, i + pool);
+              await Promise.all(batch.map(async (img) => {
+                try {
+                  const r = await fetch(img.src);
+                  const b = await r.blob();
+                  img.src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
+                } catch(e) {}
+              }));
             }
             window.webkit.messageHandlers.snapshot.postMessage(document.documentElement.outerHTML);
           } catch(e) {}
