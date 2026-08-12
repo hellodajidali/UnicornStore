@@ -23,10 +23,10 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
     override init() {
         let config = WKWebViewConfiguration()
         let userContent = WKUserContentController()
-        userContent.add(self, name: "snapshot")
         config.userContentController = userContent
         webView = WKWebView(frame: .zero, configuration: config)
         super.init()
+        userContent.add(self, name: "snapshot")
         webView.navigationDelegate = self
         webView.isOpaque = false
         webView.backgroundColor = .white
