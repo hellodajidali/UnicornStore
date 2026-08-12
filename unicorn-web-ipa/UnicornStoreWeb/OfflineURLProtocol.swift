@@ -52,6 +52,13 @@ final class CacheStore {
 /// 拦截 https 请求：缓存优先（离线可用）+ 后台刷新（联网时更新内容）
 final class OfflineURLProtocol: URLProtocol {
 
+    /// 专用 session：protocolClasses 清空，避免自己的请求被自己拦截（递归崩溃）
+    private static let netSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.protocolClasses = []
+        return URLSession(configuration: config)
+    }()
+
     static func register() {
         URLProtocol.registerClass(OfflineURLProtocol.self)
         // 私有 API：让 WKWebView 的 https 请求走 URLProtocol（TrollStore 环境可用）
@@ -91,7 +98,7 @@ final class OfflineURLProtocol: URLProtocol {
         var req = URLRequest(url: url)
         req.cachePolicy = .reloadIgnoringLocalCacheData
         req.timeoutInterval = 20
-        dataTask = URLSession.shared.dataTask(with: req) { [weak self] data, resp, err in
+        dataTask = OfflineURLProtocol.netSession.dataTask(with: req) { [weak self] data, resp, err in
             guard let self = self else { return }
             if let data = data, let http = resp as? HTTPURLResponse, http.statusCode == 200 {
                 CacheStore.shared.save(data, headers: self.headers(from: http), for: url)
@@ -113,7 +120,7 @@ final class OfflineURLProtocol: URLProtocol {
         var req = URLRequest(url: url)
         req.cachePolicy = .reloadIgnoringLocalCacheData
         req.timeoutInterval = 15
-        URLSession.shared.dataTask(with: req) { data, resp, _ in
+        OfflineURLProtocol.netSession.dataTask(with: req) { data, resp, _ in
             guard let data = data, let http = resp as? HTTPURLResponse, http.statusCode == 200 else { return }
             CacheStore.shared.save(data, headers: self.headers(from: http), for: url)
         }.resume()

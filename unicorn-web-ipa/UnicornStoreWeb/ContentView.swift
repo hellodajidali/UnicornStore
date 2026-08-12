@@ -16,8 +16,8 @@ struct WebViewContainer: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .white
         webView.scrollView.bounces = true
-        // 加载商店（离线缓存协议会在首次加载后缓存全部内容）
-        if let url = URL(string: "https://store.youwutu.top") {
+        // 加载后台管理端（离线缓存协议会在首次加载后缓存全部内容）
+        if let url = URL(string: "https://www.youwutu.top/houtai") {
             webView.load(URLRequest(url: url))
         }
         return webView
