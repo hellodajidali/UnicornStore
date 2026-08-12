@@ -25,7 +25,7 @@ struct ContentView: View {
     }
 }
 
-/// 控制器：在线加载后台 + 自动保存页面快照 + 断网时显示快照（离线可用）
+/// 控制器：在线加载后台 + 收集数据/页面缓存 + 断网时本地数据注入（页面交互完整可用）
 class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     let webView: WKWebView
     private let monitor = NWPathMonitor()
@@ -33,9 +33,13 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
     private let spinner = UIActivityIndicatorView(style: .gray)
     var lastToken = UUID()
 
-    private var snapshotURL: URL {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return dir.appendingPathComponent("snapshot.html")
+    private var offlineDataURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("offline_data.json")
+    }
+    private var indexCacheURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("index_cache.html")
     }
 
     override init() {
@@ -48,7 +52,6 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
         webView.navigationDelegate = self
         webView.isOpaque = false
         webView.backgroundColor = .white
-        // 加载指示器（白屏时提示正在加载）
         spinner.translatesAutoresizingMaskIntoConstraints = false
         webView.addSubview(spinner)
         NSLayoutConstraint.activate([
@@ -58,9 +61,7 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
         startNetworkMonitor()
     }
 
-    func reload() {
-        load()
-    }
+    func reload() { load() }
 
     func load() {
         if isOnline {
@@ -69,7 +70,7 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
                 webView.load(URLRequest(url: url))
             }
         } else {
-            loadSnapshot()
+            loadOffline()
         }
     }
 
@@ -82,9 +83,9 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
                 self.isOnline = online
                 if changed {
                     if online {
-                        self.load()          // 恢复网络：重新加载在线页面并更新快照
+                        self.load()
                     } else {
-                        self.loadSnapshot()  // 断网：显示最后快照
+                        self.loadOffline()
                     }
                 }
             }
@@ -92,15 +93,29 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
         monitor.start(queue: DispatchQueue(label: "netmon"))
     }
 
-    private func loadSnapshot() {
-        guard let html = try? String(contentsOf: snapshotURL, encoding: .utf8) else {
-            // 无快照（从未在线加载过）：显示提示
+    /// 断网：加载本地页面 + 注入本地数据（JS 正常运行，分类/按钮全部可用）
+    private func loadOffline() {
+        guard let html = try? String(contentsOf: indexCacheURL, encoding: .utf8) else {
             webView.loadHTMLString("<html><body style='text-align:center;padding-top:120px;color:#999;font-family:sans-serif'>无网络，且还没有缓存内容<br>请联网打开一次后再离线使用</body></html>", baseURL: nil)
             return
         }
-        // 关闭 JS 防止快照页面重新执行脚本清空内容
-        webView.configuration.preferences.javaScriptEnabled = false
-        webView.loadHTMLString(html, baseURL: nil)
+        let dataStr: String
+        if let d = try? String(contentsOf: offlineDataURL, encoding: .utf8) {
+            dataStr = d
+        } else {
+            dataStr = "null"
+        }
+        webView.configuration.preferences.javaScriptEnabled = true
+        // 注入本地数据（页面脚本执行前生效）
+        webView.configuration.userContentController.removeAllUserScripts()
+        let script = WKUserScript(
+            source: "window.__OFFLINE_DATA__ = \(dataStr);",
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        webView.configuration.userContentController.addUserScript(script)
+        // baseURL 用根路径：离线以顾客端前台模式渲染（后台管理需联网）
+        webView.loadHTMLString(html, baseURL: URL(string: "https://www.youwutu.top"))
     }
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -111,31 +126,47 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         spinner.stopAnimating()
         spinner.isHidden = true
-        // 页面加载完成：等数据渲染完，保存快照（图片转 base64 内嵌）
+        // 保存页面 HTML（离线用）
+        cacheCurrentPage()
+        // 等数据渲染完，收集数据（adminData + 图片 base64）
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-            self?.captureSnapshot()
+            self?.captureData()
         }
     }
 
-    private func captureSnapshot() {
+    private func cacheCurrentPage() {
+        guard isOnline, let url = URL(string: "https://www.youwutu.top") else { return }
+        // Swift 直接下载原始 HTML（含全部 JS），离线时加载
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            if let data = data, let html = String(data: data, encoding: .utf8) {
+                try? html.write(to: self?.indexCacheURL ?? URL(fileURLWithPath: "/dev/null"), atomically: true, encoding: .utf8)
+            }
+        }.resume()
+    }
+
+    /// 收集数据：adminData + 商品图片转 base64 → postMessage → 存沙盒
+    private func captureData() {
         guard isOnline else { return }
         let js = """
         (async function(){
           try {
-            const imgs = Array.from(document.querySelectorAll('img'));
-            // 并发分批转换（每批6张），避免串行太慢
+            const r = await fetch('/api/store');
+            const j = await r.json();
+            if (!j || !j.data) return;
+            const prods = j.data.products || [];
             const pool = 6;
-            for (let i = 0; i < imgs.length; i += pool) {
-              const batch = imgs.slice(i, i + pool);
-              await Promise.all(batch.map(async (img) => {
-                try {
-                  const r = await fetch(img.src);
-                  const b = await r.blob();
-                  img.src = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
-                } catch(e) {}
+            for (let i = 0; i < prods.length; i += pool) {
+              await Promise.all(prods.slice(i, i + pool).map(async (p) => {
+                if (p.imageData && p.imageData.indexOf('img_') === 0) {
+                  try {
+                    const ir = await fetch('/api/image/' + p.imageData);
+                    const b = await ir.blob();
+                    p.imageData = await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); });
+                  } catch(e) {}
+                }
               }));
             }
-            window.webkit.messageHandlers.snapshot.postMessage(document.documentElement.outerHTML);
+            window.webkit.messageHandlers.snapshot.postMessage(JSON.stringify(j.data));
           } catch(e) {}
         })();
         """
@@ -143,18 +174,18 @@ class WebViewController: NSObject, WKNavigationDelegate, WKScriptMessageHandler 
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "snapshot", let html = message.body as? String {
-            try? html.write(to: snapshotURL, atomically: true, encoding: .utf8)
+        if message.name == "snapshot", let str = message.body as? String {
+            try? str.write(to: offlineDataURL, atomically: true, encoding: .utf8)
         }
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         spinner.stopAnimating(); spinner.isHidden = true
-        if !isOnline { loadSnapshot() }
+        if !isOnline { loadOffline() }
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         spinner.stopAnimating(); spinner.isHidden = true
-        if !isOnline { loadSnapshot() }
+        if !isOnline { loadOffline() }
     }
 }
 
