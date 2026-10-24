@@ -12,7 +12,7 @@ struct WebContainer: UIViewRepresentable {
         config.allowsInlineMediaPlayback = true
         config.dataDetectorTypes = []
         let uc = WKUserContentController()
-        uc.add(context.coordinator, name: "saveImage")
+        uc.add(context.coordinator, name: "saveMedia")
         uc.add(context.coordinator, name: "rescan")
         config.userContentController = uc
 
@@ -59,38 +59,57 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
 
     func userContentController(_ uc: WKUserContentController,
                               didReceive message: WKScriptMessage) {
-        if message.name == "saveImage", let src = message.body as? String {
-            saveImage(src)
+        if message.name == "saveMedia", let src = message.body as? String {
+            saveMedia(src)
         } else if message.name == "rescan" {
             onRescan?()
         }
     }
 
-    /// 把图存进相册（网页里点"保存图片"走这里）
-    private func saveImage(_ src: String) {
+    /// 存图片或视频到相册（网页里点"保存"走这里）
+    private func saveMedia(_ src: String) {
         guard let base = webView?.url,
               let u = URL(string: src, relativeTo: base) else { return }
+        let ext = u.pathExtension.lowercased()
+        let isVideo = ["mp4", "mov", "webm", "3gp", "m4v"].contains(ext)
+
         var req = URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData,
-                             timeoutInterval: 30)
+                             timeoutInterval: 180)
         req.setValue("Mozilla/5.0 (iPhone)", forHTTPHeaderField: "User-Agent")
 
-        URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
-            guard let data = data, let img = UIImage(data: data) else {
-                DispatchQueue.main.async { self?.toast("图片下载失败") }
+        // 用 downloadTask：视频可能有几十 MB，不要整个读进内存
+        URLSession.shared.downloadTask(with: req) { [weak self] tmp, _, _ in
+            guard let tmp = tmp else {
+                DispatchQueue.main.async { self?.toast("下载失败") }
                 return
             }
+            let name = UUID().uuidString + "." + (isVideo ? (ext.isEmpty ? "mp4" : ext) : "jpg")
+            let dst = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+            try? FileManager.default.removeItem(at: dst)
+            do {
+                try FileManager.default.moveItem(at: tmp, to: dst)
+            } catch {
+                DispatchQueue.main.async { self?.toast("保存失败") }
+                return
+            }
+
             PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
                 guard status == .authorized || status == .limited else {
-                    DispatchQueue.main.async {
-                        self?.toast("没有相册权限，去设置里打开")
-                    }
+                    try? FileManager.default.removeItem(at: dst)
+                    DispatchQueue.main.async { self?.toast("没有相册权限，去设置里打开") }
                     return
                 }
                 PHPhotoLibrary.shared().performChanges({
-                    PHAssetChangeRequest.creationRequestForAsset(from: img)
+                    if isVideo {
+                        PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: dst)
+                    } else if let img = UIImage(contentsOfFile: dst.path) {
+                        PHAssetChangeRequest.creationRequestForAsset(from: img)
+                    }
                 }, completionHandler: { ok, _ in
+                    try? FileManager.default.removeItem(at: dst)
                     DispatchQueue.main.async {
-                        self?.toast(ok ? "已保存到相册" : "保存失败")
+                        let what = isVideo ? "视频" : "图片"
+                        self?.toast(ok ? "\(what)已存到相册" : "\(what)保存失败")
                     }
                 })
             }
