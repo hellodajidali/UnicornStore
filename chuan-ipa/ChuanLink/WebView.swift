@@ -40,13 +40,21 @@ struct WebContainer: UIViewRepresentable {
     }
 }
 
-final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
+final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
+                           WKScriptMessageHandler, URLSessionDownloadDelegate {
     weak var webView: WKWebView?
     var onFail: ((String) -> Void)?
     var onRescan: (() -> Void)?
 
     private var startURL: URL?
     private var retries = 0
+
+    // 保存到相册用
+    private var saveSession: URLSession?
+    private var saving = false
+    private var savingIsVideo = false
+    private var savingExt = ""
+    private var lastPct = -1
 
     func load(_ url: URL) {
         startURL = url
@@ -67,53 +75,99 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
     }
 
     /// 存图片或视频到相册（网页里点"保存"走这里）
+    /// 用带 delegate 的 session，好显示下载进度，不然用户不知道在动
     private func saveMedia(_ src: String) {
+        guard !saving else {
+            toast("正在保存，稍等一下…")
+            return
+        }
         guard let base = webView?.url,
               let u = URL(string: src, relativeTo: base) else { return }
+
         let ext = u.pathExtension.lowercased()
-        let isVideo = ["mp4", "mov", "webm", "3gp", "m4v"].contains(ext)
+        savingIsVideo = ["mp4", "mov", "webm", "3gp", "m4v"].contains(ext)
+        savingExt = ext
+        saving = true
+        lastPct = -1
 
         var req = URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData,
                              timeoutInterval: 180)
         req.setValue("Mozilla/5.0 (iPhone)", forHTTPHeaderField: "User-Agent")
 
-        // 用 downloadTask：视频可能有几十 MB，不要整个读进内存
-        URLSession.shared.downloadTask(with: req) { [weak self] tmp, _, _ in
-            guard let tmp = tmp else {
-                DispatchQueue.main.async { self?.toast("下载失败") }
-                return
-            }
-            let name = UUID().uuidString + "." + (isVideo ? (ext.isEmpty ? "mp4" : ext) : "jpg")
-            let dst = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-            try? FileManager.default.removeItem(at: dst)
-            do {
-                try FileManager.default.moveItem(at: tmp, to: dst)
-            } catch {
-                DispatchQueue.main.async { self?.toast("保存失败") }
-                return
-            }
+        toast(savingIsVideo ? "正在下载视频 0%" : "正在保存…", sticky: true)
 
-            PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
-                guard status == .authorized || status == .limited else {
-                    try? FileManager.default.removeItem(at: dst)
-                    DispatchQueue.main.async { self?.toast("没有相册权限，去设置里打开") }
-                    return
-                }
-                PHPhotoLibrary.shared().performChanges({
-                    if isVideo {
-                        PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: dst)
-                    } else if let img = UIImage(contentsOfFile: dst.path) {
-                        PHAssetChangeRequest.creationRequestForAsset(from: img)
-                    }
-                }, completionHandler: { ok, _ in
-                    try? FileManager.default.removeItem(at: dst)
-                    DispatchQueue.main.async {
-                        let what = isVideo ? "视频" : "图片"
-                        self?.toast(ok ? "\(what)已存到相册" : "\(what)保存失败")
-                    }
-                })
+        let session = URLSession(configuration: .default, delegate: self,
+                                 delegateQueue: .main)
+        saveSession = session
+        session.downloadTask(with: req).resume()
+    }
+
+    /// 下载中：刷新百分比
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0, savingIsVideo else { return }
+        let pct = Int(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) * 100)
+        guard pct != lastPct else { return }
+        lastPct = pct
+        let mb = Double(totalBytesExpectedToWrite) / 1048576.0
+        toast(String(format: "正在下载视频 %d%%  (%.1f MB)", pct, mb), sticky: true)
+    }
+
+    /// 下载完：立刻把文件挪走（这个回调一返回临时文件就没了）
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {
+        let name = UUID().uuidString + "." +
+            (savingIsVideo ? (savingExt.isEmpty ? "mp4" : savingExt) : "jpg")
+        let dst = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        try? FileManager.default.removeItem(at: dst)
+        do {
+            try FileManager.default.moveItem(at: location, to: dst)
+        } catch {
+            finishSave("保存失败")
+            return
+        }
+        toast("正在存入相册…", sticky: true)
+        writeToAlbum(dst)
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask,
+                    didCompleteWithError error: Error?) {
+        guard let err = error else { return }
+        let ns = err as NSError
+        if ns.code == NSURLErrorCancelled { return }
+        if saving { finishSave("下载失败，检查一下网络") }
+    }
+
+    private func writeToAlbum(_ dst: URL) {
+        let isVideo = savingIsVideo
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { [weak self] status in
+            guard status == .authorized || status == .limited else {
+                try? FileManager.default.removeItem(at: dst)
+                DispatchQueue.main.async { self?.finishSave("没有相册权限，去设置里打开") }
+                return
             }
-        }.resume()
+            PHPhotoLibrary.shared().performChanges({
+                if isVideo {
+                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: dst)
+                } else if let img = UIImage(contentsOfFile: dst.path) {
+                    PHAssetChangeRequest.creationRequestForAsset(from: img)
+                }
+            }, completionHandler: { ok, _ in
+                try? FileManager.default.removeItem(at: dst)
+                DispatchQueue.main.async {
+                    let what = isVideo ? "视频" : "图片"
+                    self?.finishSave(ok ? "\(what)已存到相册" : "\(what)保存失败")
+                }
+            })
+        }
+    }
+
+    private func finishSave(_ msg: String) {
+        saving = false
+        saveSession?.invalidateAndCancel()
+        saveSession = nil
+        toast(msg)
     }
 
     // MARK: - 网页里的 alert / confirm（不实现的话 confirm 会卡住）
@@ -172,31 +226,53 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScri
 
     // MARK: - 小提示
 
-    private func toast(_ text: String) {
+    private var toastLabel: UILabel?
+    private var toastTimer: DispatchWorkItem?
+
+    /// sticky=true 时不会自动消失，用来显示下载进度
+    private func toast(_ text: String, sticky: Bool = false) {
         guard let win = keyWindow() else { return }
-        let l = UILabel()
-        l.text = text
-        l.textColor = .white
-        l.font = .systemFont(ofSize: 14)
-        l.textAlignment = .center
-        l.numberOfLines = 0
-        l.backgroundColor = UIColor.black.withAlphaComponent(0.78)
-        l.layer.cornerRadius = 12
-        l.clipsToBounds = true
-        l.alpha = 0
-        l.translatesAutoresizingMaskIntoConstraints = false
-        win.addSubview(l)
-        NSLayoutConstraint.activate([
-            l.centerXAnchor.constraint(equalTo: win.centerXAnchor),
-            l.bottomAnchor.constraint(equalTo: win.safeAreaLayoutGuide.bottomAnchor, constant: -90),
-            l.widthAnchor.constraint(lessThanOrEqualTo: win.widthAnchor, multiplier: 0.7),
-            l.heightAnchor.constraint(greaterThanOrEqualToConstant: 40)
-        ])
-        UIView.animate(withDuration: 0.2) { l.alpha = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            UIView.animate(withDuration: 0.3, animations: { l.alpha = 0 }) { _ in
-                l.removeFromSuperview()
-            }
+        let l: UILabel
+        if let t = toastLabel, t.superview != nil {
+            l = t
+        } else {
+            l = UILabel()
+            l.textColor = .white
+            l.font = .systemFont(ofSize: 14)
+            l.textAlignment = .center
+            l.numberOfLines = 0
+            l.backgroundColor = UIColor.black.withAlphaComponent(0.82)
+            l.layer.cornerRadius = 12
+            l.clipsToBounds = true
+            l.alpha = 0
+            l.translatesAutoresizingMaskIntoConstraints = false
+            win.addSubview(l)
+            NSLayoutConstraint.activate([
+                l.centerXAnchor.constraint(equalTo: win.centerXAnchor),
+                l.bottomAnchor.constraint(equalTo: win.safeAreaLayoutGuide.bottomAnchor,
+                                          constant: -90),
+                l.widthAnchor.constraint(lessThanOrEqualTo: win.widthAnchor, multiplier: 0.72),
+                l.heightAnchor.constraint(greaterThanOrEqualToConstant: 42)
+            ])
+            toastLabel = l
+            UIView.animate(withDuration: 0.2) { l.alpha = 1 }
+        }
+        // UILabel 没有内边距，靠空格撑一下
+        l.text = "  " + text + "  "
+        toastTimer?.cancel()
+        toastTimer = nil
+        if !sticky {
+            let work = DispatchWorkItem { [weak self] in self?.hideToast() }
+            toastTimer = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8, execute: work)
+        }
+    }
+
+    private func hideToast() {
+        guard let l = toastLabel else { return }
+        toastLabel = nil
+        UIView.animate(withDuration: 0.3, animations: { l.alpha = 0 }) { _ in
+            l.removeFromSuperview()
         }
     }
 
