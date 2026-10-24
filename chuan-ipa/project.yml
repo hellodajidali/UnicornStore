@@ -19,10 +19,10 @@ targets:
     platform: iOS
     sources:
       - path: ChuanLink
+        excludes:
+          - Info.plist
     settings:
       base:
         INFOPLIST_FILE: ChuanLink/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.hellodajidali.chuanlink
         PRODUCT_NAME: ChuanLink
-    info:
-      path: ChuanLink/Info.plist

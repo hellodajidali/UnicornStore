@@ -23,10 +23,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string></string>
-	</dict>
+	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -36,10 +33,6 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
-	<key>UIStatusBarStyle</key>
-	<string>UIStatusBarStyleDefault</string>
-	<key>UIViewControllerBasedStatusBarAppearance</key>
-	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>需要相机来扫描电脑上的二维码，才能连接到互传页面。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
