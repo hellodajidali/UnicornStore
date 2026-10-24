@@ -1,0 +1,51 @@
+name: Build ChuanLink IPA
+on:
+  push:
+    paths:
+      - 'chuan-ipa/**'
+      - '.github/workflows/build-chuan.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - run: brew install xcodegen
+      - name: Generate project
+        working-directory: chuan-ipa
+        run: xcodegen generate --spec project.yml
+      - name: Build
+        working-directory: chuan-ipa
+        run: |
+          xcodebuild -project ChuanLink.xcodeproj -scheme ChuanLink \
+            -sdk iphoneos -configuration Release -derivedDataPath Build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chuan-build-log
+          path: chuan-ipa/build.log
+          compression-level: 0
+      - name: Show errors
+        if: failure()
+        run: |
+          grep -n "error:" chuan-ipa/build.log | head -40 | \
+            while IFS= read -r line; do echo "::error::$line"; done
+          tail -40 chuan-ipa/build.log
+      - name: Package IPA
+        working-directory: chuan-ipa
+        run: |
+          mkdir -p Payload
+          cp -r Build/Build/Products/Release-iphoneos/ChuanLink.app Payload/
+          zip -r ChuanLink.ipa Payload/
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChuanLink-IPA
+          path: chuan-ipa/ChuanLink.ipa
+          compression-level: 0
