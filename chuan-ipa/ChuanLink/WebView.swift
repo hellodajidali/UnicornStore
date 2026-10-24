@@ -53,6 +53,7 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
     private var saveSession: URLSession?
     private var saving = false
     private var savingIsVideo = false
+    private var savingIsImage = false
     private var savingExt = ""
     private var lastPct = -1
 
@@ -86,6 +87,8 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
 
         let ext = u.pathExtension.lowercased()
         savingIsVideo = ["mp4", "mov", "webm", "3gp", "m4v"].contains(ext)
+        savingIsImage = ["jpg", "jpeg", "png", "gif", "webp", "heic", "bmp"]
+            .contains(ext)
         savingExt = ext
         saving = true
         lastPct = -1
@@ -94,7 +97,13 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
                              timeoutInterval: 180)
         req.setValue("Mozilla/5.0 (iPhone)", forHTTPHeaderField: "User-Agent")
 
-        toast(savingIsVideo ? "正在下载视频 0%" : "正在保存…", sticky: true)
+        if savingIsVideo {
+            toast("正在下载视频 0%", sticky: true)
+        } else if savingIsImage {
+            toast("正在保存…", sticky: true)
+        } else {
+            toast("正在下载文件 0%", sticky: true)
+        }
 
         let session = URLSession(configuration: .default, delegate: self,
                                  delegateQueue: .main)
@@ -106,19 +115,20 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
                     totalBytesExpectedToWrite: Int64) {
-        guard totalBytesExpectedToWrite > 0, savingIsVideo else { return }
+        guard totalBytesExpectedToWrite > 0, !savingIsImage else { return }
         let pct = Int(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite) * 100)
         guard pct != lastPct else { return }
         lastPct = pct
         let mb = Double(totalBytesExpectedToWrite) / 1048576.0
-        toast(String(format: "正在下载视频 %d%%  (%.1f MB)", pct, mb), sticky: true)
+        let what = savingIsVideo ? "视频" : "文件"
+        toast(String(format: "正在下载%@ %d%%  (%.1f MB)", what, pct, mb), sticky: true)
     }
 
     /// 下载完：立刻把文件挪走（这个回调一返回临时文件就没了）
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                     didFinishDownloadingTo location: URL) {
         let name = UUID().uuidString + "." +
-            (savingIsVideo ? (savingExt.isEmpty ? "mp4" : savingExt) : "jpg")
+            (savingExt.isEmpty ? (savingIsVideo ? "mp4" : "jpg") : savingExt)
         let dst = FileManager.default.temporaryDirectory.appendingPathComponent(name)
         try? FileManager.default.removeItem(at: dst)
         do {
@@ -127,8 +137,31 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
             finishSave("保存失败")
             return
         }
-        toast("正在存入相册…", sticky: true)
-        writeToAlbum(dst)
+        if savingIsVideo || savingIsImage {
+            toast("正在存入相册…", sticky: true)
+            writeToAlbum(dst)
+        } else {
+            // 普通文件：弹系统分享面板，可以让用户"存储到文件"或发给别人
+            shareFile(dst)
+        }
+    }
+
+    private func shareFile(_ url: URL) {
+        saving = false
+        saveSession?.invalidateAndCancel()
+        saveSession = nil
+        hideToast()
+        guard let vc = topVC() else { return }
+        let act = UIActivityViewController(activityItems: [url],
+                                           applicationActivities: nil)
+        if let pop = act.popoverPresentationController {
+            pop.sourceView = vc.view
+            pop.sourceRect = CGRect(x: vc.view.bounds.midX,
+                                    y: vc.view.bounds.maxY - 90,
+                                    width: 1, height: 1)
+            pop.permittedArrowDirections = []
+        }
+        vc.present(act, animated: true)
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask,
