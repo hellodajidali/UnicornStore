@@ -228,9 +228,12 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
 
     private func retryOrFail() {
         guard let u = startURL else { return }
-        if retries < 2 {
+        // 扫码时电脑那边可能还在打通道，多等一会儿（累计约 25 秒）
+        let waits: [Double] = [2, 3, 5, 7, 10]
+        if retries < waits.count {
+            let delay = waits[retries]
             retries += 1
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self = self else { return }
                 self.webView?.load(URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData,
                                               timeoutInterval: 30))
