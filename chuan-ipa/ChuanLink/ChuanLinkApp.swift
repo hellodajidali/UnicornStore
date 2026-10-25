@@ -131,6 +131,10 @@ struct RootView: View {
         if !items.contains(where: { $0.name == "d" }) {
             items.append(URLQueryItem(name: "d", value: deviceId))
         }
+        // app=1：告诉电脑"这是装了我自己 App 的设备"，给它主人权限
+        if !items.contains(where: { $0.name == "app" }) {
+            items.append(URLQueryItem(name: "app", value: "1"))
+        }
         c.queryItems = items
         return c.url ?? u
     }
