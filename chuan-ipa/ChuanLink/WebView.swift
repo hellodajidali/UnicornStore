@@ -17,6 +17,8 @@ struct WebContainer: UIViewRepresentable {
         config.userContentController = uc
 
         let wv = WKWebView(frame: .zero, configuration: config)
+        // 让电脑认得出"这是我自己的 App"，扫访客码进来也能拿到主人权限
+        wv.customUserAgent = "ChuanLink/1.0"
         wv.navigationDelegate = context.coordinator
         wv.uiDelegate = context.coordinator
         wv.isOpaque = false
