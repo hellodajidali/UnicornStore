@@ -6,6 +6,7 @@ struct WebContainer: UIViewRepresentable {
     let url: URL
     let onFail: (String) -> Void
     let onRescan: () -> Void
+    let onLoaded: () -> Void
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -28,6 +29,7 @@ struct WebContainer: UIViewRepresentable {
         wv.scrollView.bounces = false
 
         context.coordinator.webView = wv
+        context.coordinator.onLoaded = onLoaded
         context.coordinator.load(url)
         return wv
     }
@@ -45,6 +47,7 @@ struct WebContainer: UIViewRepresentable {
 final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
                            WKScriptMessageHandler, URLSessionDownloadDelegate {
     weak var webView: WKWebView?
+    var onLoaded: (() -> Void)?
     var onFail: ((String) -> Void)?
     var onRescan: (() -> Void)?
 
@@ -63,7 +66,7 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
         startURL = url
         retries = 0
         webView?.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData,
-                                 timeoutInterval: 30))
+                                 timeoutInterval: 10))
     }
 
     // MARK: - JS 消息
@@ -238,7 +241,7 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self = self else { return }
                 self.webView?.load(URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData,
-                                              timeoutInterval: 30))
+                                              timeoutInterval: 10))
             }
         } else {
             onFail?("连不上电脑。可能程序关了，或者电脑那边重启过地址变了，重新扫一次码")
@@ -260,6 +263,7 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         retries = 0
+        onLoaded?()
     }
 
     // MARK: - 小提示

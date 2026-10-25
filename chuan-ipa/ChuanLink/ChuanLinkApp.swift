@@ -14,6 +14,7 @@ struct RootView: View {
     @State private var hint: String = ""
     @State private var err: String = ""
     @State private var retryTick: Int = 0
+    @State private var loaded: Bool = false
 
     private static let SAVE_KEY = "chuan_last_url"
 
@@ -38,12 +39,18 @@ struct RootView: View {
                     },
                     onRescan: {
                         err = ""
+                        loaded = false
                         target = nil
                         UserDefaults.standard.removeObject(forKey: RootView.SAVE_KEY)
-                    }
+                    },
+                    onLoaded: { loaded = true }
                 )
                 .id(retryTick)          // 点重试时整块重建，等于重新加载
                 .edgesIgnoringSafeArea(.all)
+
+                if !loaded && err.isEmpty {
+                    connectingCard
+                }
 
                 if !err.isEmpty {
                     errorCard
@@ -68,6 +75,24 @@ struct RootView: View {
     }
 
     /// 连不上时盖在页面上的提示卡片：重试 / 重新扫码
+    // 网页还没加载出来时盖一层，别让人对着白屏等
+    private var connectingCard: some View {
+        VStack(spacing: 14) {
+            ProgressView()
+                .scaleEffect(1.15)
+            Text("正在连接电脑…")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.86))
+            Text("电脑刚开机或正在重连时要等一会儿")
+                .font(.caption)
+                .foregroundColor(.white.opacity(0.5))
+                .multilineTextAlignment(.center)
+        }
+        .padding(26)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(16)
+    }
+
     private var errorCard: some View {
         VStack(spacing: 14) {
             Text("连不上电脑")
@@ -82,6 +107,7 @@ struct RootView: View {
             HStack(spacing: 12) {
                 Button(action: {
                     err = ""
+                    loaded = false
                     retryTick += 1
                 }) {
                     Text("重试")
