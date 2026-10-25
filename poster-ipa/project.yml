@@ -1,0 +1,30 @@
+name: Poster
+options:
+  bundleIdPrefix: com.hellodajidali
+  deploymentTarget:
+    iOS: "14.0"
+
+settings:
+  base:
+    TARGETED_DEVICE_FAMILY: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: ""
+    PROVISIONING_PROFILE_SPECIFIER: ""
+
+targets:
+  Poster:
+    type: application
+    platform: iOS
+    sources:
+      - path: Poster
+        excludes:
+          - Info.plist
+    settings:
+      base:
+        INFOPLIST_FILE: Poster/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.hellodajidali.poster
+        PRODUCT_NAME: Poster
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

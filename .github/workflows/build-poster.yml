@@ -1,0 +1,51 @@
+name: Build Poster IPA
+on:
+  push:
+    paths:
+      - 'poster-ipa/**'
+      - '.github/workflows/build-poster.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - run: brew install xcodegen
+      - name: Generate project
+        working-directory: poster-ipa
+        run: xcodegen generate --spec project.yml
+      - name: Build
+        working-directory: poster-ipa
+        run: |
+          xcodebuild -project Poster.xcodeproj -scheme Poster \
+            -sdk iphoneos -configuration Release -derivedDataPath Build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+      - name: Upload build log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poster-build-log
+          path: poster-ipa/build.log
+          compression-level: 0
+      - name: Show errors
+        if: failure()
+        run: |
+          grep -n "error:" poster-ipa/build.log | head -60 | \
+            while IFS= read -r line; do echo "::error::$line"; done
+          tail -60 poster-ipa/build.log
+      - name: Package IPA
+        working-directory: poster-ipa
+        run: |
+          mkdir -p Payload
+          cp -r Build/Build/Products/Release-iphoneos/Poster.app Payload/
+          zip -r Poster.ipa Payload/
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Poster-IPA
+          path: poster-ipa/Poster.ipa
+          compression-level: 0
