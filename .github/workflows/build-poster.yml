@@ -17,20 +17,23 @@ jobs:
       - name: Generate project
         working-directory: poster-ipa
         run: xcodegen generate --spec project.yml
-      - name: Build (iOS 14+)
+      # 主力版：iOS 15+，不内嵌任何 Swift 动态库（iOS 16+ 的 TrollStore 只吃这种）
+      - name: Build (main, iOS 15+)
         working-directory: poster-ipa
         run: |
           xcodebuild -project Poster.xcodeproj -scheme Poster \
             -sdk iphoneos -configuration Release -derivedDataPath Build \
+            IPHONEOS_DEPLOYMENT_TARGET=15.0 \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
           exit ${PIPESTATUS[0]}
-      - name: Build (iOS 15+ variant)
+      # 兼容版：iOS 14+，会内嵌 libswift_Concurrency.dylib
+      - name: Build (legacy, iOS 14+)
         working-directory: poster-ipa
         run: |
           xcodebuild -project Poster.xcodeproj -scheme Poster \
-            -sdk iphoneos -configuration Release -derivedDataPath Build15 \
-            IPHONEOS_DEPLOYMENT_TARGET=15.0 \
-            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build15.log
+            -sdk iphoneos -configuration Release -derivedDataPath Build14 \
+            IPHONEOS_DEPLOYMENT_TARGET=14.0 \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build14.log
           exit ${PIPESTATUS[0]}
       - name: Upload build log
         if: failure()
@@ -39,28 +42,30 @@ jobs:
           name: poster-build-log
           path: |
             poster-ipa/build.log
-            poster-ipa/build15.log
+            poster-ipa/build14.log
           compression-level: 0
       - name: Show errors
         if: failure()
         run: |
-          grep -n "error:" poster-ipa/build.log poster-ipa/build15.log | head -60 | \
+          grep -n "error:" poster-ipa/build.log poster-ipa/build14.log | head -60 | \
             while IFS= read -r line; do echo "::error::$line"; done
           tail -40 poster-ipa/build.log
       - name: Package IPAs
         working-directory: poster-ipa
         run: |
-          mkdir -p out14/Payload out15/Payload
-          cp -r Build/Build/Products/Release-iphoneos/Poster.app out14/Payload/
-          cp -r Build15/Build/Products/Release-iphoneos/Poster.app out15/Payload/
-          (cd out14 && zip -qr ../Poster.ipa Payload)
-          (cd out15 && zip -qr ../Poster-ios15.ipa Payload)
-          ls -la Poster.ipa Poster-ios15.ipa
+          mkdir -p out15/Payload out14/Payload
+          cp -r Build/Build/Products/Release-iphoneos/Poster.app out15/Payload/
+          cp -r Build14/Build/Products/Release-iphoneos/Poster.app out14/Payload/
+          (cd out15 && zip -qr ../Poster.ipa Payload)
+          (cd out14 && zip -qr ../Poster-ios14.ipa Payload)
+          echo "--- Frameworks 检查（主力版应为空）---"
+          ls -la out15/Payload/Poster.app/ || true
+          ls -la Poster.ipa Poster-ios14.ipa
       - name: Upload IPAs
         uses: actions/upload-artifact@v4
         with:
           name: Poster-IPA
           path: |
             poster-ipa/Poster.ipa
-            poster-ipa/Poster-ios15.ipa
+            poster-ipa/Poster-ios14.ipa
           compression-level: 0
