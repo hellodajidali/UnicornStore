@@ -136,7 +136,7 @@ struct PosterData: Codable {
         self.bgHex = "#FFFFFF"
         self.bg2Hex = "#FFF3E6"
         self.gradient = false
-        self.ratioRaw = CanvasRatio.r3x4.rawValue
+        self.ratioRaw = CanvasRatio.r1x1.rawValue
         self.paddingRatio = 0.08
         self.lineSpacing = 6
         self.defaultSize = 20
@@ -153,7 +153,7 @@ struct PosterData: Codable {
         bgHex = try c.decodeIfPresent(String.self, forKey: .bgHex) ?? "#FFFFFF"
         bg2Hex = try c.decodeIfPresent(String.self, forKey: .bg2Hex) ?? "#FFF3E6"
         gradient = try c.decodeIfPresent(Bool.self, forKey: .gradient) ?? false
-        ratioRaw = try c.decodeIfPresent(String.self, forKey: .ratioRaw) ?? CanvasRatio.r3x4.rawValue
+        ratioRaw = try c.decodeIfPresent(String.self, forKey: .ratioRaw) ?? CanvasRatio.r1x1.rawValue
         paddingRatio = try c.decodeIfPresent(CGFloat.self, forKey: .paddingRatio) ?? 0.08
         lineSpacing = try c.decodeIfPresent(CGFloat.self, forKey: .lineSpacing) ?? 6
         defaultSize = try c.decodeIfPresent(CGFloat.self, forKey: .defaultSize) ?? 20

@@ -64,15 +64,7 @@ struct EditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 10) {
-                    canvasArea
-                    bannerArea
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 14)
-            }
+            contentArea
             Divider()
             bottomBar
         }
@@ -167,6 +159,29 @@ struct EditorView: View {
         .background(Color(.systemBackground))
     }
 
+    /// 贴图模式下画布不套 ScrollView（否则滚动手势会抢走拖图手势）
+    @ViewBuilder private var contentArea: some View {
+        if activeTool == .sticker {
+            VStack(spacing: 10) {
+                canvasArea
+                bannerArea
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+        } else {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 10) {
+                    canvasArea
+                    bannerArea
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 14)
+            }
+        }
+    }
+
     // MARK: - 画布
 
     private var canvasWidth: CGFloat {
@@ -209,7 +224,8 @@ struct EditorView: View {
             }
             StickerLayer(store: store,
                          canvas: CGSize(width: w, height: h),
-                         selectedId: $selectedSticker)
+                         selectedId: $selectedSticker,
+                         showHint: activeTool == .sticker)
         }
         .frame(width: w, height: h)
         .clipped()
@@ -259,6 +275,7 @@ struct EditorView: View {
             toolPanel
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    applyAllButton
                     ForEach(Tool.allCases) { tool in
                         toolButton(tool)
                     }
@@ -269,6 +286,32 @@ struct EditorView: View {
         .padding(.top, 8)
         .padding(.bottom, 8)
         .background(Color(.systemBackground))
+    }
+
+    private var applyAllButton: some View {
+        Button(action: { model.applyToAll.toggle() }) {
+            VStack(spacing: 3) {
+                Image(systemName: model.applyToAll ? "checkmark.square.fill" : "square.dashed")
+                    .font(.system(size: 15))
+                Text("改全部")
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(model.applyToAll ? .white : Color.primary)
+            .frame(width: 54, height: 46)
+            .background(model.applyToAll ? Color.orange : Color(.secondarySystemBackground))
+            .cornerRadius(10)
+        }
+        .buttonStyle(BorderlessButtonStyle())
+    }
+
+    private var sizeHint: String {
+        if model.applyToAll {
+            return "已开启「改全部」：调整会改整篇文字"
+        }
+        if model.hasSelection {
+            return "已选中 \(model.selectionLength) 个字：只改这部分"
+        }
+        return "没选中：只影响接下来输入的字（要改整篇点左下角「改全部」）"
     }
 
     private func toolButton(_ tool: Tool) -> some View {
@@ -332,9 +375,9 @@ struct EditorView: View {
                     .font(.system(size: 13, weight: .medium))
                     .frame(width: 28)
             }
-            Text(model.hasSelection ? "已选中 \(model.selectionLength) 个字：只改选中的部分" : "没有选中：改全部文字")
+            Text(sizeHint)
                 .font(.system(size: 11))
-                .foregroundColor(.secondary)
+                .foregroundColor(model.applyToAll ? Color.orange : Color.secondary)
         }
         .padding(.horizontal, 14)
     }
@@ -490,7 +533,7 @@ struct EditorView: View {
                         .frame(width: 40)
                 }
             } else {
-                Text("点画布里的图片可选中，拖动移动，双指缩放")
+                Text("点一下图片选中（蓝实线框），按住就能拖；没选中的显示淡虚线框")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
             }
@@ -504,7 +547,7 @@ struct EditorView: View {
                 HStack(spacing: 8) {
                     ForEach(CanvasRatio.allCases) { ratio in
                         Button(action: { store.mutatePoster { $0.ratioRaw = ratio.rawValue } }) {
-                            Text(ratio.title)
+                            Text(ratio == .r1x1 ? "1:1 推荐" : ratio.title)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(store.poster.ratioRaw == ratio.rawValue ? .white : Color.primary)
                                 .padding(.horizontal, 12)
@@ -517,6 +560,11 @@ struct EditorView: View {
                 }
                 .padding(.vertical, 2)
             }
+
+            Text("朋友圈里 1:1 展示最宽、字最清楚；3:4 竖图会被微信压窄，字显小")
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 12) {
                 Text("背景色")
@@ -624,7 +672,8 @@ struct EditorView: View {
         persist()
         var p = store.poster
         p.setText(model.attributed)
-        let image = PosterRenderer.render(p, width: canvasWidth, scale: 3)
+        let scale = max(2.0, min(4.0, 1242.0 / max(1.0, canvasWidth)))
+        let image = PosterRenderer.render(p, width: canvasWidth, scale: scale)
         shareImage = image
         showShareSheet = true
     }

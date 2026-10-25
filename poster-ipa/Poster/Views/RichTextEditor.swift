@@ -10,6 +10,8 @@ final class RichTextModel: ObservableObject {
     /// 外部替换内容时 +1（用于让 UITextView 同步）
     @Published var revision: Int = 0
 
+    /// 改全部文字模式（开启后所有样式调整作用于整篇）
+    @Published var applyToAll: Bool = false
     @Published var hasSelection: Bool = false
     @Published var selectionLength: Int = 0
     @Published var currentSize: CGFloat = 20
@@ -100,10 +102,17 @@ final class RichTextModel: ObservableObject {
 
     // MARK: - 工具
 
-    private func targetRange(_ tv: UITextView) -> NSRange {
+    /// 样式作用范围：
+    /// - 开了「改全部」→ 整篇
+    /// - 有选中 → 只改选中
+    /// - 都没有 → nil（只影响接下来输入的字，不动已有文字）
+    private func editingRange(_ tv: UITextView) -> NSRange? {
+        let full = NSRange(location: 0, length: tv.textStorage.length)
+        guard full.length > 0 else { return nil }
+        if applyToAll { return full }
         let sel = tv.selectedRange
         if sel.length > 0 { return sel }
-        return NSRange(location: 0, length: tv.textStorage.length)
+        return nil
     }
 
     private func weightIndex(in storage: NSTextStorage, at location: Int) -> PosterWeight {
@@ -144,13 +153,12 @@ final class RichTextModel: ObservableObject {
 
     func applySize(_ size: CGFloat) {
         let clamped = min(96, max(8, size))
-        guard let tv = textView, tv.textStorage.length > 0 else {
-            currentSize = clamped
-            defaultSize = clamped
+        currentSize = clamped
+        defaultSize = clamped
+        guard let tv = textView, let range = editingRange(tv) else {
             textView?.typingAttributes = typingAttrs()
             return
         }
-        let range = targetRange(tv)
         let runs = fontRuns(in: tv.textStorage, range: range)
         let storage = tv.textStorage
         storage.beginEditing()
@@ -160,22 +168,17 @@ final class RichTextModel: ObservableObject {
             storage.addAttribute(kPosterWeight, value: weight.rawValue, range: sub)
         }
         storage.endEditing()
-        currentSize = clamped
-        if range.location == 0 && range.length == storage.length {
-            defaultSize = clamped
-        }
         tv.typingAttributes = typingAttrs()
         commit(tv)
     }
 
     func applyWeight(_ weight: PosterWeight) {
-        guard let tv = textView, tv.textStorage.length > 0 else {
-            currentWeight = weight.rawValue
-            defaultWeight = weight.rawValue
+        currentWeight = weight.rawValue
+        defaultWeight = weight.rawValue
+        guard let tv = textView, let range = editingRange(tv) else {
             textView?.typingAttributes = typingAttrs()
             return
         }
-        let range = targetRange(tv)
         let runs = fontRuns(in: tv.textStorage, range: range)
         let storage = tv.textStorage
         storage.beginEditing()
@@ -185,30 +188,21 @@ final class RichTextModel: ObservableObject {
             storage.addAttribute(kPosterWeight, value: weight.rawValue, range: sub)
         }
         storage.endEditing()
-        currentWeight = weight.rawValue
-        if range.location == 0 && range.length == storage.length {
-            defaultWeight = weight.rawValue
-        }
         tv.typingAttributes = typingAttrs()
         commit(tv)
     }
 
     func applyColor(_ hex: String) {
-        guard let tv = textView, tv.textStorage.length > 0 else {
-            currentColorHex = hex
-            textHex = hex
+        currentColorHex = hex
+        textHex = hex
+        guard let tv = textView, let range = editingRange(tv) else {
             textView?.typingAttributes = typingAttrs()
             return
         }
-        let range = targetRange(tv)
         let storage = tv.textStorage
         storage.beginEditing()
         storage.addAttribute(.foregroundColor, value: UIColor(hex: hex), range: range)
         storage.endEditing()
-        currentColorHex = hex
-        if range.location == 0 && range.length == storage.length {
-            textHex = hex
-        }
         tv.typingAttributes = typingAttrs()
         commit(tv)
     }
