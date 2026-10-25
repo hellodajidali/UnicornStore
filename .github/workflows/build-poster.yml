@@ -17,35 +17,50 @@ jobs:
       - name: Generate project
         working-directory: poster-ipa
         run: xcodegen generate --spec project.yml
-      - name: Build
+      - name: Build (iOS 14+)
         working-directory: poster-ipa
         run: |
           xcodebuild -project Poster.xcodeproj -scheme Poster \
             -sdk iphoneos -configuration Release -derivedDataPath Build \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log
           exit ${PIPESTATUS[0]}
+      - name: Build (iOS 15+ variant)
+        working-directory: poster-ipa
+        run: |
+          xcodebuild -project Poster.xcodeproj -scheme Poster \
+            -sdk iphoneos -configuration Release -derivedDataPath Build15 \
+            IPHONEOS_DEPLOYMENT_TARGET=15.0 \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build15.log
+          exit ${PIPESTATUS[0]}
       - name: Upload build log
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: poster-build-log
-          path: poster-ipa/build.log
+          path: |
+            poster-ipa/build.log
+            poster-ipa/build15.log
           compression-level: 0
       - name: Show errors
         if: failure()
         run: |
-          grep -n "error:" poster-ipa/build.log | head -60 | \
+          grep -n "error:" poster-ipa/build.log poster-ipa/build15.log | head -60 | \
             while IFS= read -r line; do echo "::error::$line"; done
-          tail -60 poster-ipa/build.log
-      - name: Package IPA
+          tail -40 poster-ipa/build.log
+      - name: Package IPAs
         working-directory: poster-ipa
         run: |
-          mkdir -p Payload
-          cp -r Build/Build/Products/Release-iphoneos/Poster.app Payload/
-          zip -r Poster.ipa Payload/
-      - name: Upload IPA
+          mkdir -p out14/Payload out15/Payload
+          cp -r Build/Build/Products/Release-iphoneos/Poster.app out14/Payload/
+          cp -r Build15/Build/Products/Release-iphoneos/Poster.app out15/Payload/
+          (cd out14 && zip -qr ../Poster.ipa Payload)
+          (cd out15 && zip -qr ../Poster-ios15.ipa Payload)
+          ls -la Poster.ipa Poster-ios15.ipa
+      - name: Upload IPAs
         uses: actions/upload-artifact@v4
         with:
           name: Poster-IPA
-          path: poster-ipa/Poster.ipa
+          path: |
+            poster-ipa/Poster.ipa
+            poster-ipa/Poster-ios15.ipa
           compression-level: 0
